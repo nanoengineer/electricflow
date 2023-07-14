@@ -15,8 +15,7 @@ let runningMode = "VIDEO";
 let enableWebcamButton;
 let webcamRunning = false;
 
-window.detectedLandmarks = undefined;
-let results = undefined;
+window.handDetectionResults = undefined;
 // Before we can use HandLandmarker class we must wait for it to finish
 // loading. Machine Learning models can be large and take a moment to
 // get everything needed to run.
@@ -71,7 +70,7 @@ function enableCam(event) {
     navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
         video.srcObject = stream;
         video.addEventListener("loadeddata", predictWebcam);
-        
+
     });
 }
 let lastVideoTime = -1;
@@ -86,11 +85,7 @@ async function predictWebcam() {
     let startTimeMs = performance.now();
     if (lastVideoTime !== video.currentTime) {
         lastVideoTime = video.currentTime;
-        results = handLandmarker.detectForVideo(video, startTimeMs);
-        if(results.landmarks)
-        {
-            window.detectedLandmarks = results.landmarks;
-        }
+        window.handDetectionResults = handLandmarker.detectForVideo(video, startTimeMs);
     }
     // Call this function again to keep predicting when the browser is ready.
     if (webcamRunning === true) {
