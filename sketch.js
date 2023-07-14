@@ -35,14 +35,18 @@ let sketch = function (p) {
                     if (hand[0].categoryName == "Right") {
                         dotColor = rightHandColor;
                     }
-                    drawHandConnections(results.landmarks[(hand[0].index)]);
-                    drawHandLandmarks(results.landmarks[(hand[0].index)], dotColor);
+                    const lm = results.landmarks[(hand[0].index)];
+                    const wlm = results.worldLandmarks[(hand[0].index)];
+                    const palmFill = p.lerpColor(p.color("#FF0000"), p.color("#0000FF"), getPalmOrientation(wlm, hand[0].categoryName));
+                    drawPalmFill(lm, palmFill);
+                    drawHandConnections(lm);
+                    drawHandLandmarks(lm, dotColor);
                 }
             } else if (results.handednesses.length == 1) {
                 let hand = results.handednesses[0][0];
-                let dotColor = rightHandColor;
+                let dotColor = leftHandColor;
                 if (hand.categoryName == 'Right') {
-                    dotColor = leftHandColor;
+                    dotColor = rightHandColor;
                 }
                 const lm = results.landmarks[0];
                 const palmFill = p.lerpColor(p.color("#FF0000"), p.color("#0000FF"), getPalmOrientation(results.worldLandmarks[0], hand.categoryName));
