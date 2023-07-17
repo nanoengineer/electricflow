@@ -14,13 +14,40 @@ let sketch = function (p) {
     let leftHandColor = p.color("#4cbcf5");
     let rightHandColor = p.color("#f5823b");
 
+    let fieldDensity = 3.5;
+    let fieldPoints = [];
+    let charges = [];
+
+    let t = 0;
+
+
     p.setup = function () {
         canvas = p.createCanvas(width, height);
         canvas.id = 'p5canvas';
+
+        for (let i = fieldDensity; i < width / fieldDensity; i += fieldDensity) {
+            for (let j = fieldDensity; j < height / fieldDensity; j += fieldDensity) {
+                fieldPoints.push(new FieldPoint(i * fieldDensity, j * fieldDensity));
+            }
+        }
+
+        charges.push(new Charge(width / 2, height / 2, 1));
+        charges.push(new Charge(width / 2, height / 2, -1));
+        charges.push(new Charge(width / 2, height / 2, 1));
+        charges.push(new Charge(width / 2, height / 2, -1));
+        charges.push(new Charge(width / 2, height / 2, 2));
+        charges.push(new Charge(width / 2, height / 2, -2));
+        // charges.push(new Charge(width / 2, height / 2, 60));
+        // charges.push(new Charge(width / 2, height / 2, -80));
+        // charges.push(new Charge(width / 2, height / 2, -40));
+
+
+
     };
 
     p.draw = function () {
-        p.clear();
+        p.background(0);
+        // p.clear();
         // p.noFill();
         // p.stroke("#51b7cf");
         // p.strokeWeight(5);
@@ -50,18 +77,112 @@ let sketch = function (p) {
                 }
                 const lm = results.landmarks[0];
                 const palmFill = p.lerpColor(p.color("#FF0000"), p.color("#0000FF"), getPalmOrientation(results.worldLandmarks[0], hand.categoryName));
-                drawPalmFill(lm, palmFill)
+                drawPalmFill(lm, palmFill);
                 drawHandConnections(lm);
                 drawHandLandmarks(lm, dotColor);
+
+                // for (let i = 0; i < 5; i++) {
+                //     charges[i].position = p.createVector(lm[(i + 1) * 4].x * width, lm[(i + 1) * 4].y * height);
+                // }
+
             }
+        }
+
+        t = t + 0.005;
+
+
+        for (let i = 0; i < charges.length; i++) {
+            let x = p.noise(t + 5 + i) * 1.5 * width;
+            let y = p.noise(t + 80 + i) * 1.5 * height;
+            charges[i].position = p.createVector(x, y);
+        }
+
+        for (ch of charges) {
+            ch.draw();
+        }
+
+        for (fp of fieldPoints) {
+            fp.update(charges);
+            fp.draw();
         }
     };
 
-
-
-
-
     //helper functions
+
+    class FieldPoint {
+        constructor(x, y) {
+            this.pos = p.createVector(x, y);
+            this.vector = p.createVector(0, 0);
+            this.potential = 0;
+            this.negativeColor = p.color("#ff0000");
+            this.positiveColor = p.color("#0000f7");
+        }
+
+        update(charges) {
+            const field_potential = getElectricFieldandPotential(charges, this.pos);
+            this.vector = field_potential.fieldVector;
+            this.potential = field_potential.potential;
+        }
+
+        draw() {
+            let vectorDrawLength = p.constrain(this.vector.mag() * 10, 0, 25);
+            p.stroke(p.lerpColor(this.negativeColor, this.positiveColor, p.map(this.potential, -1000, 1000, 0, 1)));
+            p.strokeWeight(3);
+            this.vector.normalize();
+            p.line(this.pos.x, this.pos.y, this.pos.x - this.vector.x * vectorDrawLength, this.pos.y - this.vector.y * vectorDrawLength)
+        }
+    }
+
+
+    function getElectricFieldandPotential(charges, point) {
+
+        const k = 100000;
+        let fieldVector = p.createVector(0, 0);
+        let potential = 0;
+
+        //electric potential kq/r
+        //electric field kq/r^2
+
+        for (let i = 0; i < charges.length; i++) {
+
+            const chPos = charges[i].position;
+            const chCharge = charges[i].chargeMag;
+            const distance = chPos.dist(point);
+            const vectorDirection = p.createVector(chPos.x - point.x, chPos.y - point.y).normalize();
+            const v = k * chCharge / (distance);
+            const fieldStrength = v / distance;
+            potential += v;
+            const E = vectorDirection.mult(fieldStrength);
+            fieldVector.add(E);
+        }
+        return { fieldVector, potential };
+    }
+
+    class Charge {
+
+        constructor(x, y, charge) {
+            this.pos = p.createVector(x, y);
+            this.charge = charge
+            this.color = p.color(p.random(100) + 125, p.random(100) + 125, p.random(100) + 125);
+        }
+
+        draw() {
+            // p.fill(this.color)
+            // p.circle(this.pos.x, this.pos.y, p.sqrt(p.abs(this.charge) * 100 / p.PI) - 5);
+        }
+
+        get chargeMag() {
+            return this.charge;
+        }
+
+        get position() {
+            return this.pos;
+        }
+
+        set position(pos) {
+            this.pos = pos;
+        }
+    }
 
     function getPalmOrientation(worldLandmarks, handedness) {
         // Highlight palm normal vector
