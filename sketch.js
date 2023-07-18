@@ -25,10 +25,11 @@ let sketch = function (p) {
     let sParticles = [];
 
 
+    //Field Matrix
     const FieldSettings = {
         numOfAmbientCharges: 6,
         numOfFingerCharges: 5,
-        pixelsPerStep: 15,
+        pixelsPerStep: 10,
         cols: 0,
         rows: 0
     };
@@ -37,14 +38,12 @@ let sketch = function (p) {
     fieldSettings.cols = width / fieldSettings.pixelsPerStep;
     fieldSettings.rows = height / fieldSettings.pixelsPerStep;
 
-
     //For perlin noise
     let t = 0;
 
-
     p.setup = function () {
         canvas = p.createCanvas(width, height);
-        canvas.id = 'p5canvas';
+        // canvas.id = 'p5canvas';
 
         const fieldDensity = fieldSettings.pixelsPerStep;
 
@@ -58,13 +57,12 @@ let sketch = function (p) {
             charges.push(new Charge(0, 0, 1, p));
         }
 
-        for (let i = 0; i < 1000; i++) {
-            lParticles[i] = new Particle(6);
+        for (let i = 0; i < 500; i++) {
+            lParticles[i] = new Particle(160);
         }
-        for (let i = 0; i < 5000; i++) {
-            sParticles[i] = new Particle(1);
+        for (let i = 0; i < 2000; i++) {
+            sParticles[i] = new Particle(60);
         }
-        // p.background(0);
     };
 
     p.draw = function () {
@@ -99,7 +97,7 @@ let sketch = function (p) {
                 // drawHandConnections(lm);
                 // drawHandLandmarks(lm, dotColor);
 
-                setHandCharges(fieldSettings, lm, p.map(palmOrient, 0, 1, -0.2, 0.2));
+                setHandCharges(fieldSettings, lm, p.map(palmOrient, 0, 1, -0.1, 0.1));
             }
         }
         else {
@@ -135,23 +133,31 @@ let sketch = function (p) {
             ch.draw();
         }
 
-        for (var i = 0; i < lParticles.length; i++) {
-            lParticles[i].follow(fieldPoints, fieldSettings);
-            lParticles[i].update();
-            lParticles[i].edges();
-            lParticles[i].sinks(charges);
-            lParticles[i].show(4);
-        }
+        runParticlesEngine(lParticles, fieldPoints, fieldSettings, 4);
+        runParticlesEngine(sParticles, fieldPoints, fieldSettings, 2);
 
-        for (var i = 0; i < sParticles.length; i++) {
-            sParticles[i].follow(fieldPoints, fieldSettings);
-            sParticles[i].update();
-            sParticles[i].edges();
-            sParticles[i].sinks(charges);
-            sParticles[i].show(2);
-        }
-
+        showFramerate();
     };
+
+    //Show framerate
+    function showFramerate() {
+        let fps = p.frameRate();
+        p.textSize(30);
+        p.fill(255);
+        p.stroke(0);
+        p.text(p.nf(fps, 2, 0), width - 80, 50);
+    }
+
+    //Running the particle engine and show it
+    function runParticlesEngine(particles, fieldPoints, fieldSettings, dotSize) {
+        for (var i = 0; i < particles.length; i++) {
+            particles[i].follow(fieldPoints, fieldSettings);
+            particles[i].update();
+            particles[i].edges();
+            particles[i].sinks();
+            particles[i].show(dotSize);
+        }
+    }
 
     //Setting and clear charges attached to hand
 

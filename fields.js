@@ -87,14 +87,14 @@ class Particle {
         this.pos = window.p.createVector(p.random(width), p.random(height));
         this.vel = window.p.createVector(0, 0);
         this.acc = window.p.createVector(0, 0);
-        this.maxspeed = maxspeed;
+        this.maxspeed = maxspeed; //pixels/second
         this.prevPos = this.pos.copy();
         this.potential = 0;
     }
 
     update() {
         this.vel.add(this.acc.mult(-1));
-        this.vel.limit(this.maxspeed);
+        this.vel.limit(this.maxspeed / window.p.frameRate());
         this.pos.add(this.vel);
         this.acc.mult(0);
     }
@@ -149,16 +149,22 @@ class Particle {
 
     }
 
-    sinks(charges) {
-        const delta = 2;
-        for (const charge of charges) {
-            if (this.pos.x > charge.position.x - delta && this.pos.x < charge.position.x + delta && this.pos.y > charge.position.y - delta && this.pos.y < charge.position.y + delta && charge.chargeMag < 0) {
-                this.pos.x = window.p.random(0, 5);
-                this.pos.y = window.p.random(0, 5);
-                this.updatePrev();
-                break;
-            }
+    sinks() {
+        //particle is in a potential sink, source it from corner of screen
+        if (this.potential < -800) {
+            this.pos.x = window.p.random(0, 5);
+            this.pos.y = window.p.random(0, 5);
+            this.updatePrev();
         }
+        // const delta = 5;
+        // for (const charge of charges) {
+        //     if (this.pos.x > charge.position.x - delta && this.pos.x < charge.position.x + delta && this.pos.y > charge.position.y - delta && this.pos.y < charge.position.y + delta && charge.chargeMag < 0) {
+        //         this.pos.x = window.p.random(0, 5);
+        //         this.pos.y = window.p.random(0, 5);
+        //         this.updatePrev();
+        //         break;
+        //     }
+        // }
     }
 
 }
