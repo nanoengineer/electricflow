@@ -21,13 +21,14 @@ let sketch = function (p) {
     let fieldPoints = [];
     let charges = [];
 
-    let particles = [];
+    let lParticles = [];
+    let sParticles = [];
 
 
     const FieldSettings = {
-        numOfAmbientCharges: 4,
+        numOfAmbientCharges: 6,
         numOfFingerCharges: 5,
-        pixelsPerStep: 8,
+        pixelsPerStep: 15,
         cols: 0,
         rows: 0
     };
@@ -57,8 +58,11 @@ let sketch = function (p) {
             charges.push(new Charge(0, 0, 1, p));
         }
 
-        for (let i = 0; i < 10000; i++) {
-            particles[i] = new Particle();
+        for (let i = 0; i < 1000; i++) {
+            lParticles[i] = new Particle(6);
+        }
+        for (let i = 0; i < 5000; i++) {
+            sParticles[i] = new Particle(1);
         }
         // p.background(0);
     };
@@ -109,7 +113,7 @@ let sketch = function (p) {
             let x = p.noise(t + 5 + i) * 2 * width - 0.5 * width;
             let y = p.noise(t + 80 + i) * 2 * height - 0.5 * height;
             charges[i].position = p.createVector(x, y);
-            charges[i].charge = p.noise(t + 20 * i) * 0.2 - 0.1;
+            charges[i].charge = p.noise(t + 20 * i) * 0.4 - 0.2;
         }
 
         // For Debugging
@@ -126,22 +130,25 @@ let sketch = function (p) {
             // fp.posColor = p.lerpColor(p.color("#009efa"), p.color("#6f00ff"), p.noise(t + 19));
             // fp.draw();
         }
-        // for (fp of fieldPoints) {
-        //     fp.vector = p.createVector(-5, -5);
-        //     fp.potential = 10;
-        //     fp.draw();
-        // }
 
         for (ch of charges) {
             ch.draw();
         }
 
-        for (var i = 0; i < particles.length; i++) {
-            particles[i].follow(fieldPoints, fieldSettings);
-            particles[i].update();
-            particles[i].edges();
-            particles[i].sinks(charges);
-            particles[i].show();
+        for (var i = 0; i < lParticles.length; i++) {
+            lParticles[i].follow(fieldPoints, fieldSettings);
+            lParticles[i].update();
+            lParticles[i].edges();
+            lParticles[i].sinks(charges);
+            lParticles[i].show(4);
+        }
+
+        for (var i = 0; i < sParticles.length; i++) {
+            sParticles[i].follow(fieldPoints, fieldSettings);
+            sParticles[i].update();
+            sParticles[i].edges();
+            sParticles[i].sinks(charges);
+            sParticles[i].show(2);
         }
 
     };

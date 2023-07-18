@@ -67,9 +67,6 @@ class Charge {
     }
 
     draw() {
-        // window.p.noStroke();
-        // window.p.fill(255, 20);
-        // window.p.circle(this.pos.x, this.pos.y, 10);
     }
 
     get chargeMag() {
@@ -86,12 +83,13 @@ class Charge {
 }
 
 class Particle {
-    constructor() {
+    constructor(maxspeed) {
         this.pos = window.p.createVector(p.random(width), p.random(height));
         this.vel = window.p.createVector(0, 0);
         this.acc = window.p.createVector(0, 0);
-        this.maxspeed = 5;
+        this.maxspeed = maxspeed;
         this.prevPos = this.pos.copy();
+        this.potential = 0;
     }
 
     update() {
@@ -108,7 +106,8 @@ class Particle {
         let index = x + y * fieldSettings.cols;
         if (index < fieldPoints.length) {
             let force = fieldPoints[index].vector;
-            this.applyForce(force);
+            this.applyForce(force.add(window.p.random(-0.1, 0.1)));
+            this.potential = fieldPoints[index].potential;
         } else {
             console.log("WTF");
         }
@@ -118,11 +117,10 @@ class Particle {
         this.acc.add(force);
     }
 
-    show() {
-        window.p.stroke(255, 150);
-        window.p.strokeWeight(2);
-        // window.p.line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
-        window.p.point(this.pos.x, this.pos.y);
+    show(sw) {
+        window.p.stroke(window.p.lerpColor(window.p.color("#a9f702"), window.p.color("#0260f7"), window.p.map(this.potential, -200, 100, 0, 1)));
+        window.p.strokeWeight(sw);
+        window.p.line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
         this.updatePrev();
     }
 
