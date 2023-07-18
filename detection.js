@@ -69,6 +69,7 @@ function enableCam(event) {
     // Activate the webcam stream.
     navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
         video.srcObject = stream;
+        video.style.display = 'none';
         video.addEventListener("loadeddata", predictWebcam);
 
     });
