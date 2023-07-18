@@ -151,11 +151,17 @@ class Particle {
 
     }
 
-    sinks() {
+    sinks(sinkValue) {
         //particle is in a potential sink, source it from corner of screen
-        if (this.potential < -800) {
-            this.pos.x = window.p.random(0, 5);
-            this.pos.y = window.p.random(0, 5);
+        if (this.potential < 0.90 * sinkValue) {
+            let edge = window.p.random([0, 1, 2, 3]);
+            if (edge % 2 == 0) {
+                this.pos.x = window.p.random([0, width]);
+                this.pos.y = window.p.random(0, height);
+            } else {
+                this.pos.x = window.p.random(0, width);
+                this.pos.y = window.p.random([0, height]);
+            }
             this.updatePrev();
         }
         // const delta = 5;
