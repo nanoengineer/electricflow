@@ -89,6 +89,8 @@ class Particle {
         this.maxspeed = maxspeed; //pixels/second
         this.prevPos = this.pos.copy();
         this.potential = 0;
+        this.nc = window.p.color("#a9f702");
+        this.pc = window.p.color("#0260f7");
     }
 
     update() {
@@ -105,7 +107,7 @@ class Particle {
         let index = x + y * fieldSettings.cols;
         if (index < fieldPoints.length) {
             let force = fieldPoints[index].vector;
-            this.applyForce(force.add(window.p.random(-0.1, 0.1)));
+            this.applyForce(force.add(window.p.random(-0.5, 0.5)));
             this.potential = fieldPoints[index].potential;
         }
         // } else {
@@ -118,7 +120,7 @@ class Particle {
     }
 
     show(sw) {
-        window.p.stroke(window.p.lerpColor(window.p.color("#a9f702"), window.p.color("#0260f7"), window.p.map(this.potential, -200, 100, 0, 1)));
+        window.p.stroke(window.p.lerpColor(this.nc, this.pc, window.p.map(this.potential, -200, 100, 0, 1)));
         window.p.strokeWeight(sw);
         window.p.line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
         this.updatePrev();

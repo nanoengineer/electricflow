@@ -29,7 +29,7 @@ let sketch = function (p) {
     const FieldSettings = {
         numOfAmbientCharges: 6,
         numOfFingerCharges: 5,
-        pixelsPerStep: 10,
+        pixelsPerStep: 8,
         cols: 0,
         rows: 0
     };
@@ -57,8 +57,8 @@ let sketch = function (p) {
             charges.push(new Charge(0, 0, 1, p));
         }
 
-        for (let i = 0; i < 500; i++) {
-            lParticles[i] = new Particle(160);
+        for (let i = 0; i < 1000; i++) {
+            lParticles[i] = new Particle(100);
         }
         for (let i = 0; i < 2000; i++) {
             sParticles[i] = new Particle(60);
@@ -92,7 +92,7 @@ let sketch = function (p) {
                 }
                 const lm = results.landmarks[0];
                 const palmOrient = getPalmOrientation(results.worldLandmarks[0], hand.categoryName)
-                const palmFill = p.lerpColor(p.color("#FF0000"), p.color("#0000FF"), palmOrient);
+                // const palmFill = p.lerpColor(p.color("#FF0000"), p.color("#0000FF"), palmOrient);
                 // drawPalmFill(lm, palmFill);
                 // drawHandConnections(lm);
                 // drawHandLandmarks(lm, dotColor);
@@ -110,7 +110,7 @@ let sketch = function (p) {
         for (let i = 0; i < fieldSettings.numOfAmbientCharges; i++) {
             let x = p.noise(t + 5 + i) * 2 * width - 0.5 * width;
             let y = p.noise(t + 80 + i) * 2 * height - 0.5 * height;
-            charges[i].position = p.createVector(x, y);
+            charges[i].position.set([x, y]);
             charges[i].charge = p.noise(t + 20 * i) * 0.4 - 0.2;
         }
 
@@ -134,7 +134,7 @@ let sketch = function (p) {
         }
 
         runParticlesEngine(lParticles, fieldPoints, fieldSettings, 4);
-        runParticlesEngine(sParticles, fieldPoints, fieldSettings, 2);
+        runParticlesEngine(sParticles, fieldPoints, fieldSettings, 1);
 
         showFramerate();
     };
@@ -144,8 +144,15 @@ let sketch = function (p) {
         let fps = p.frameRate();
         p.textSize(30);
         p.fill(255);
-        p.stroke(0);
-        p.text(p.nf(fps, 2, 0), width - 80, 50);
+        p.noStroke();
+        p.push();
+
+        // Scale -1, 1 means reverse the x axis, keep y the same.
+        p.scale(-1, 1);
+
+        // Because the x-axis is reversed, we need to draw at different x position.
+        p.text(p.nf(fps, 2, 0), -width, height - 10);
+        p.pop();
     }
 
     //Running the particle engine and show it
@@ -163,13 +170,13 @@ let sketch = function (p) {
 
     function setHandCharges(settings, lm, value) {
         for (let i = settings.numOfAmbientCharges; i < settings.numOfAmbientCharges + settings.numOfFingerCharges; i++) {
-            charges[i].position = p.createVector(lm[(i - settings.numOfAmbientCharges + 1) * 4].x * width, lm[(i - settings.numOfAmbientCharges + 1) * 4].y * height);
+            charges[i].position.set([lm[(i - settings.numOfAmbientCharges + 1) * 4].x * width, lm[(i - settings.numOfAmbientCharges + 1) * 4].y * height]);
             charges[i].charge = value;
         }
     }
     function clearHandCharges(settings, charges) {
         for (let i = settings.numOfAmbientCharges; i < settings.numOfAmbientCharges + settings.numOfFingerCharges; i++) {
-            charges[i].position = p.createVector(0, 0);
+            charges[i].position.set([0, 0]);
             charges[i].charge = 0;
         }
     }
