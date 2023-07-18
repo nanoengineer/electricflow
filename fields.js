@@ -1,4 +1,6 @@
 class FieldPoint {
+    #privateVector1 = window.p.createVector(0, 0);
+
     constructor(x, y, p5) {
         this.p = p5;
         this.pos = window.p.createVector(x, y);
@@ -10,9 +12,7 @@ class FieldPoint {
     }
 
     update(charges) {
-        const field_potential = this.#getElectricFieldandPotential(charges, this.pos);
-        this.vector = field_potential.fieldVector;
-        this.potential = field_potential.potential;
+        this.#updateElectricFieldandPotential(charges, this.pos);
     }
 
     draw() {
@@ -31,11 +31,11 @@ class FieldPoint {
         this.positiveColor = pc;
     }
 
-    #getElectricFieldandPotential(charges, point) {
+    #updateElectricFieldandPotential(charges, point) {
 
         const k = 100000;
-        let fieldVector = window.p.createVector(0, 0);
-        let potential = 0;
+        this.vector.set([0, 0]);
+        this.potential = 0;
 
         //electric potential kq/r
         //electric field kq/r^2
@@ -47,13 +47,12 @@ class FieldPoint {
             }
             const chPos = charges[i].position;
             const distance = chPos.dist(point);
-            const vectorDirection = window.p.createVector(chPos.x - point.x, chPos.y - point.y).normalize();
             const v = k * chCharge / (distance);
             const fieldStrength = v / distance;
-            potential += v;
-            fieldVector.add(vectorDirection.mult(fieldStrength));
+            this.#privateVector1.set([chPos.x - point.x, chPos.y - point.y]).normalize();
+            this.potential += v;
+            this.vector.add(this.#privateVector1.mult(fieldStrength));
         }
-        return { fieldVector, potential };
     }
 }
 
@@ -108,9 +107,10 @@ class Particle {
             let force = fieldPoints[index].vector;
             this.applyForce(force.add(window.p.random(-0.1, 0.1)));
             this.potential = fieldPoints[index].potential;
-        } else {
-            console.log("WTF");
         }
+        // } else {
+        //     console.log("WTF");
+        // }
     }
 
     applyForce(force) {
