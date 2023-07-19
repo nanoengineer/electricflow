@@ -82,6 +82,7 @@ class Charge {
 }
 
 class Particle {
+    #defaultForce = window.p.createVector(0, 0);
     constructor(maxspeed) {
         this.pos = window.p.createVector(p.random(width), p.random(height));
         this.vel = window.p.createVector(0, 0);
@@ -91,10 +92,11 @@ class Particle {
         this.potential = 0;
         this.nc = window.p.color("#a9f702");
         this.pc = window.p.color("#0260f7");
+
     }
 
     update() {
-        this.vel.add(this.acc.mult(-1));
+        this.vel.add(this.acc.mult(-1)); //deal with flipped canvas
         this.vel.limit(this.maxspeed / window.p.frameRate());
         this.pos.add(this.vel);
         this.acc.mult(0);
@@ -105,14 +107,14 @@ class Particle {
         let x = window.p.floor(this.pos.x / step);
         let y = window.p.floor(this.pos.y / step);
         let index = x + y * fieldSettings.cols;
-        if (index < fieldPoints.length) {
+        if (index < fieldPoints.length && index >= 0) {
             let force = fieldPoints[index].vector;
-            this.applyForce(force.add(window.p.random(-0.5, 0.5)));
+            this.applyForce(force.add(window.p.random(-0.1, 0.1)));
             this.potential = fieldPoints[index].potential;
+        } else {
+            // let force = this.#defaultForce.set([width / 2 - this.pos.x, height / 2 - this.pos.y]);
+            // this.applyForce(force);
         }
-        // } else {
-        //     console.log("WTF");
-        // }
     }
 
     applyForce(force) {
@@ -135,20 +137,23 @@ class Particle {
         if (this.pos.x > width) {
             this.pos.x = 0;
             this.updatePrev();
+            // this.vel.set([0, 0]);
         }
         if (this.pos.x < 0) {
             this.pos.x = width;
             this.updatePrev();
+            // this.vel.set([0, 0]);
         }
         if (this.pos.y > height) {
             this.pos.y = 0;
             this.updatePrev();
+            // this.vel.set([0, 0]);
         }
         if (this.pos.y < 0) {
             this.pos.y = height;
             this.updatePrev();
+            // this.vel.set([0, 0]);
         }
-
     }
 
     sinks(sinkValue) {

@@ -71,7 +71,6 @@ function enableCam(event) {
         video.srcObject = stream;
         video.style.display = 'none';
         video.addEventListener("loadeddata", predictWebcam);
-
     });
 }
 let lastVideoTime = -1;

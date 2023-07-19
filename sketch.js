@@ -2,6 +2,8 @@ let canvas;
 let width = document.getElementById("video").width;
 let height = document.getElementById("video").height;
 
+
+
 const handLandmarkConnections = [
     [0, 1], [1, 2], [2, 3], [3, 4],  // Thumb
     [5, 6], [6, 7], [7, 8],  // Index finger
@@ -11,6 +13,7 @@ const handLandmarkConnections = [
 ];
 
 window.p = undefined;
+window.pg = undefined;
 
 let sketch = function (p) {
     window.p = p;
@@ -27,7 +30,7 @@ let sketch = function (p) {
 
     //Field Matrix
     const FieldSettings = {
-        numOfAmbientCharges: 6,
+        numOfAmbientCharges: 4,
         numOfFingerCharges: 5,
         pixelsPerStep: 8,
         cols: 0,
@@ -43,6 +46,7 @@ let sketch = function (p) {
 
     p.setup = function () {
         canvas = p.createCanvas(width, height);
+        window.pg = p.createGraphics(width, height);
         // canvas.id = 'p5canvas';
 
         const fieldDensity = fieldSettings.pixelsPerStep;
@@ -54,19 +58,64 @@ let sketch = function (p) {
         }
 
         for (let i = 0; i < fieldSettings.numOfAmbientCharges + fieldSettings.numOfFingerCharges; i++) {
-            charges.push(new Charge(0, 0, 1, p));
+            charges.push(new Charge(0, 0, 0, p));
         }
 
         for (let i = 0; i < 1000; i++) {
-            lParticles[i] = new Particle(100);
+            lParticles[i] = new Particle(140);
         }
         for (let i = 0; i < 2000; i++) {
             sParticles[i] = new Particle(60);
         }
+        p.background(0);
+
+
+        // window.pg.background(0, 0);
     };
 
     p.draw = function () {
+
         p.background(0, 20);
+        // window.pg.clear();
+
+        t = t + 0.004;
+
+        //Only evolve the ambient charges
+        for (let i = 0; i < fieldSettings.numOfAmbientCharges; i++) {
+            let x = p.noise(t + 5 + i) * 2 * width - 0.5 * width;
+            let y = p.noise(t + 80 + i) * 2 * height - 0.5 * height;
+            charges[i].position.set([x, y]);
+            charges[i].charge = p.noise(t + 20 * i) * 0.4 - 0.2;
+        }
+
+        // For Debugging
+        // for (let i = 0; i < fieldSettings.numOfAmbientCharges; i++) {
+        //     let x = 0.5 * width;
+        //     let y = 0.5 * height;
+        //     charges[i].position = p.createVector(x, y);
+        //     charges[i].charge = -0.1;
+        // }
+        let sinkVal = 0;
+        for (fp of fieldPoints) {
+            fp.update(charges);
+            if (fp.potential < sinkVal) {
+                sinkVal = fp.potential;
+            }
+            // fp.negColor = p.lerpColor(p.color("#faab00"), p.color("#e35cf7"), p.noise(t));
+            // fp.posColor = p.lerpColor(p.color("#009efa"), p.color("#6f00ff"), p.noise(t + 19));
+            // fp.draw();
+        }
+
+        for (ch of charges) {
+            ch.draw();
+        }
+
+        runParticlesEngine(lParticles, fieldPoints, fieldSettings, 4, sinkVal);
+        runParticlesEngine(sParticles, fieldPoints, fieldSettings, 1, sinkVal);
+
+        showFramerate();
+
+
         let results = window.handDetectionResults;
 
         if (handResultValid(results)) {
@@ -94,50 +143,24 @@ let sketch = function (p) {
                 const palmOrient = getPalmOrientation(results.worldLandmarks[0], hand.categoryName)
                 // const palmFill = p.lerpColor(p.color("#FF0000"), p.color("#0000FF"), palmOrient);
                 // drawPalmFill(lm, palmFill);
-                // drawHandConnections(lm);
-                // drawHandLandmarks(lm, dotColor);
+                // drawHandConnections(lm, window.pg);
+                // drawHandLandmarks(lm, dotColor, window.pg);
 
-                setHandCharges(fieldSettings, lm, p.map(palmOrient, 0, 1, -0.1, 0.1));
+                setHandCharges(fieldSettings, lm, p.map(palmOrient, 0, 1, -1, 1));
             }
         }
         else {
             clearHandCharges(fieldSettings, charges);
         }
 
-        t = t + 0.004;
+        // p.push();
+        // p.tint(255, 10);
+        // p.image(window.pg, 0, 0);
+        // p.pop();
 
-        //Only evolve the ambient charges
-        for (let i = 0; i < fieldSettings.numOfAmbientCharges; i++) {
-            let x = p.noise(t + 5 + i) * 2 * width - 0.5 * width;
-            let y = p.noise(t + 80 + i) * 2 * height - 0.5 * height;
-            charges[i].position.set([x, y]);
-            charges[i].charge = p.noise(t + 20 * i) * 0.4 - 0.2;
-        }
-
-        // For Debugging
-        // for (let i = 0; i < fieldSettings.numOfAmbientCharges; i++) {
-        //     let x = 0.5 * width;
-        //     let y = 0.5 * height;
-        //     charges[i].position = p.createVector(x, y);
-        //     charges[i].charge = 5;
-        // }
-
-        for (fp of fieldPoints) {
-            fp.update(charges);
-            // fp.negColor = p.lerpColor(p.color("#faab00"), p.color("#e35cf7"), p.noise(t));
-            // fp.posColor = p.lerpColor(p.color("#009efa"), p.color("#6f00ff"), p.noise(t + 19));
-            // fp.draw();
-        }
-
-        for (ch of charges) {
-            ch.draw();
-        }
-
-        runParticlesEngine(lParticles, fieldPoints, fieldSettings, 4);
-        runParticlesEngine(sParticles, fieldPoints, fieldSettings, 1);
-
-        showFramerate();
     };
+
+
 
     //Show framerate
     function showFramerate() {
@@ -156,12 +179,12 @@ let sketch = function (p) {
     }
 
     //Running the particle engine and show it
-    function runParticlesEngine(particles, fieldPoints, fieldSettings, dotSize) {
+    function runParticlesEngine(particles, fieldPoints, fieldSettings, dotSize, sinkVal) {
         for (var i = 0; i < particles.length; i++) {
             particles[i].follow(fieldPoints, fieldSettings);
             particles[i].update();
             particles[i].edges();
-            particles[i].sinks();
+            particles[i].sinks(sinkVal);
             particles[i].show(dotSize);
         }
     }

@@ -76,35 +76,35 @@ function handResultValid(result) {
     }
 }
 
-function drawHandLandmarks(handLandmarks, landmarkColor) {
-    window.p.noStroke();
-    window.p.fill(landmarkColor);
+function drawHandLandmarks(handLandmarks, landmarkColor, canvas) {
+    canvas.noStroke();
+    canvas.fill(landmarkColor);
     for (let i = 0; i < handLandmarks.length; i++) {
         const landmark = handLandmarks[i];
-        window.p.ellipse(landmark.x * width, landmark.y * height, 8, 8);
+        canvas.ellipse(landmark.x * width, landmark.y * height, 8, 8);
     }
 }
 
-function drawHandConnections(landmarks) {
+function drawHandConnections(landmarks, canvas) {
     // Draw connections between landmarks
     for (let i = 0; i < handLandmarkConnections.length; i++) {
         let [pointAIndex, pointBIndex] = handLandmarkConnections[i];
         let pointA = landmarks[pointAIndex];
         let pointB = landmarks[pointBIndex];
-        window.p.stroke("white");
-        window.p.strokeWeight(2);
-        window.p.line(pointA.x * width, pointA.y * height, pointB.x * width, pointB.y * height);
+        canvas.stroke("white");
+        canvas.strokeWeight(2);
+        canvas.line(pointA.x * width, pointA.y * height, pointB.x * width, pointB.y * height);
     }
 }
 
-function drawPalmFill(landmarks, palmFill) {
+function drawPalmFill(landmarks, palmFill, canvas) {
     let palmLandmarks = [landmarks[0], landmarks[1], landmarks[5], landmarks[9], landmarks[13], landmarks[17]];
-    window.p.fill(palmFill);
-    window.p.stroke("white");
-    window.p.strokeWeight(2);
-    window.p.beginShape();
+    canvas.fill(palmFill);
+    canvas.stroke("white");
+    canvas.strokeWeight(2);
+    canvas.beginShape();
     for (let i = 0; i < palmLandmarks.length; i++) {
-        window.p.vertex(palmLandmarks[i].x * width, palmLandmarks[i].y * height);
+        canvas.vertex(palmLandmarks[i].x * width, palmLandmarks[i].y * height);
     }
-    window.p.endShape(window.p.CLOSE);
+    canvas.endShape(window.p.CLOSE);
 }

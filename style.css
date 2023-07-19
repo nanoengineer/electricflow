@@ -97,6 +97,7 @@ footer {
 canvas {
   z-index: 1;
   position: absolute;
+  border-radius: 12px;
   pointer-events: none;
   transform: rotateY(180deg);
   -webkit-transform: rotateY(180deg);
