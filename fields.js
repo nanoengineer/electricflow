@@ -47,8 +47,8 @@ class FieldPoint {
             }
             const chPos = charges[i].position;
             const distance = chPos.dist(point);
-            const v = k * chCharge / (distance);
-            const fieldStrength = v / distance;
+            const v = k * chCharge / (distance + 0.1); //prevent infinity
+            const fieldStrength = v / (distance + 0.1);
             this.#privateVector1.set([chPos.x - point.x, chPos.y - point.y]).normalize();
             this.potential += v;
             this.vector.add(this.#privateVector1.mult(fieldStrength));
@@ -99,14 +99,14 @@ class Particle {
         this.vel.add(this.acc.mult(-1)); //deal with flipped canvas
         this.vel.limit(this.maxspeed / window.p.frameRate());
         this.pos.add(this.vel);
-        this.acc.mult(0);
+        this.acc.set([0, 0]);
     }
 
     follow(fieldPoints, fieldSettings) {
-        let step = fieldSettings.pixelsPerStep;
+        const step = fieldSettings.pixelsPerStep;
         let x = window.p.floor(this.pos.x / step);
         let y = window.p.floor(this.pos.y / step);
-        let index = x + y * fieldSettings.cols;
+        const index = x + y * fieldSettings.cols;
         if (index < fieldPoints.length && index >= 0) {
             let force = fieldPoints[index].vector;
             this.applyForce(force.add(window.p.random(-0.05, 0.05)));
@@ -121,11 +121,11 @@ class Particle {
         this.acc.add(force);
     }
 
-    show(sw, canvas) {
+    show(canvas) {
         canvas.stroke(window.p.lerpColor(this.nc, this.pc, window.p.map(this.potential, -400, 150, 0, 1)));
-        canvas.strokeWeight(sw);
-        canvas.line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
-        this.updatePrev();
+        // canvas.line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
+        canvas.point(this.pos.x, this.pos.y);
+        // this.updatePrev();
     }
 
     updatePrev() {
@@ -134,24 +134,24 @@ class Particle {
     }
 
     edges() {
-        if (this.pos.x > width) {
+        if (this.pos.x > width && this.vel.x > 0) {
             this.pos.x = 0;
-            this.updatePrev();
+            // this.updatePrev();
             // this.vel.set([0, 0]);
         }
-        if (this.pos.x < 0) {
+        if (this.pos.x < 0 && this.vel.x < 0) {
             this.pos.x = width;
-            this.updatePrev();
+            // this.updatePrev();
             // this.vel.set([0, 0]);
         }
-        if (this.pos.y > height) {
+        if (this.pos.y > height && this.vel.y < 0) {
             this.pos.y = 0;
-            this.updatePrev();
+            // this.updatePrev();
             // this.vel.set([0, 0]);
         }
-        if (this.pos.y < 0) {
+        if (this.pos.y < 0 && this.vel.y > 0) {
             this.pos.y = height;
-            this.updatePrev();
+            // this.updatePrev();
             // this.vel.set([0, 0]);
         }
     }
@@ -165,9 +165,9 @@ class Particle {
                 this.pos.y = window.p.random(0, height);
             } else {
                 this.pos.x = window.p.random(0, width);
-                this.pos.y = window.p.random([0, height]);
+                this.pos.y = window.p.random([0, height - 1]);
             }
-            this.updatePrev();
+            // this.updatePrev();
         }
         // const delta = 5;
         // for (const charge of charges) {

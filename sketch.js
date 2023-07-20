@@ -80,14 +80,14 @@ let sketch = function (p) {
         for (let i = 0; i < 2000; i++) {
             lParticles[i] = new Particle(60);
         }
-        for (let i = 0; i < 1000; i++) {
+        for (let i = 0; i < 2000; i++) {
             sParticles[i] = new Particle(50);
         }
         p.background(0);
         particleGraphics.background(0);
-        // handGraphics.background(0);
-        // p.image(particleGraphics, 0, 0);
-        // p.image(handGraphics, 0, 0);
+        handGraphics.background(0);
+        p.image(particleGraphics, 0, 0);
+        p.image(handGraphics, 0, 0);
     };
 
     p.draw = function () {
@@ -95,14 +95,20 @@ let sketch = function (p) {
         particleGraphics.background(0, 10);
         handGraphics.clear();
 
-        t = t + 0.001;
+        t = t + 0.004;
 
+        let polarity = 1;
         //Only evolve the ambient charges
         for (let i = 0; i < fieldSettings.numOfAmbientCharges; i++) {
-            let x = p.noise(t + 5 + i) * 2 * width - 0.5 * width;
-            let y = p.noise(t + 80 + i) * 2 * height - 0.5 * height;
+            let x = p.noise(t + 5 + i) * 1.2 * width - 0.1 * width;
+            let y = p.noise(t + 80 + i) * 1.2 * height - 0.1 * height;
             charges[i].position.set([x, y]);
-            charges[i].charge = p.noise(t + 20 * i) * 0.4 - 0.2;
+            //even index charges are sources, odd are sinks. 
+            if (i % 2 == 1) {
+                polarity = -1;
+            }
+            // Sources are more powerful
+            charges[i].charge = p.noise(t + 20 * i) * 0.3 * (polarity) + polarity * 0.1;
         }
 
         //Hand detection from MediaPipe
@@ -157,13 +163,15 @@ let sketch = function (p) {
             clearHandCharges(fieldSettings, charges);
         }
 
-        // For Debugging
+        // // For Debugging
         // for (let i = 0; i < fieldSettings.numOfAmbientCharges; i++) {
         //     let x = 0.5 * width;
         //     let y = 0.5 * height;
         //     charges[i].position = p.createVector(x, y);
         //     charges[i].charge = -0.1;
         // }
+
+
         let sinkVal = 0;
         let sourceVal = 0;
         for (fp of fieldPoints) {
@@ -174,10 +182,9 @@ let sketch = function (p) {
             if (fp.potential > sourceVal) {
                 sourceVal = fp.potential;
             }
-            // fp.negColor = p.lerpColor(p.color("#faab00"), p.color("#e35cf7"), p.noise(t));
-            // fp.posColor = p.lerpColor(p.color("#009efa"), p.color("#6f00ff"), p.noise(t + 19));
-            // fp.draw();
         }
+
+        // setTestField(-1, -1);
 
         for (ch of charges) {
             ch.draw();
@@ -203,9 +210,6 @@ let sketch = function (p) {
         }
     };
 
-
-
-
     //Show framerate
     function showFrameRate() {
         let fps = p.frameRate();
@@ -222,14 +226,28 @@ let sketch = function (p) {
         p.pop();
     }
 
+    function setTestField(x, y) {
+        for (ch of charges) {
+            ch.chargeMag = 0;
+        }
+
+        for (fp of fieldPoints) {
+            fp.vector.set(x, y);
+            // fp.negColor = p.lerpColor(p.color("#faab00"), p.color("#e35cf7"), p.noise(t));
+            // fp.posColor = p.lerpColor(p.color("#009efa"), p.color("#6f00ff"), p.noise(t + 19));
+            fp.draw();
+        }
+    }
+
     //Running the particle engine and show it
     function runParticlesEngine(particles, fieldPoints, fieldSettings, dotSize, sinkVal, canvas) {
+        canvas.strokeWeight(dotSize);
         for (var i = 0; i < particles.length; i++) {
             particles[i].follow(fieldPoints, fieldSettings);
             particles[i].update();
             particles[i].edges();
             particles[i].sinks(sinkVal);
-            particles[i].show(dotSize, canvas);
+            particles[i].show(canvas);
         }
     }
 

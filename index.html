@@ -52,6 +52,11 @@ limitations under the License. -->
     </div>
     </section>
     <!-- partial -->
+    <!-- position the video to the right of the sketch -->
+    <script>
+      const videoElement = document.getElementById('video')
+      videoElement.style.left = `${videoElement.width * 2 + 10}px`;
+    </script>
     <script type="module" src="./detection.js"></script>
     <script src="./helpers.js"></script>
     <script src="./fields.js"></script>
