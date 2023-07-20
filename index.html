@@ -30,9 +30,11 @@ limitations under the License. -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
 
   <body>
-    <h2>Demo: Webcam continuous hands landmarks detection</h2>
-    <p>Hold your hand in front of your webcam to get real-time hand landmarker detection.</br>Click <b>enable webcam</b>
-      below and grant access to the webcam if prompted.</p>
+    <h2>Demo: Real-time control of flow field via webcam + Mediapipe</h2>
+    <p>After enabling the webcam, hold your hand in front of your webcam to control the flowing particles.</br>Click
+      <b>enable webcam</b>
+      below and grant access to the webcam if prompted.
+    </p>
 
     <div id="liveView" class="videoView">
       <button id="webcamButton" class="mdc-button mdc-button--raised">
@@ -40,7 +42,7 @@ limitations under the License. -->
         <span class="mdc-button__label">ENABLE WEBCAM</span>
       </button>
       <div style="position: absolute;">
-        <video id="video" width="960" height="720" style="position: absolute; left: 0px; top: 0px" autoplay
+        <video id="video" width="480" height="360" style="position: absolute; left: 0px; top: 0px" autoplay
           playsinline></video>
       </div>
     </div>

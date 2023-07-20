@@ -85,14 +85,25 @@ function drawHandLandmarks(handLandmarks, landmarkColor, canvas) {
     }
 }
 
+function drawFingerTipLandmarks(handLandmarks, landmarkColor, canvas) {
+    canvas.stroke(landmarkColor);
+    canvas.fill(landmarkColor);
+    for (let i = 1; i < handLandmarks.length; i++) {
+        if (i % 4 == 0) {
+            const landmark = handLandmarks[i];
+            canvas.ellipse(landmark.x * width, landmark.y * height, 10, 10);
+        }
+    }
+}
+
 function drawHandConnections(landmarks, canvas) {
     // Draw connections between landmarks
     for (let i = 0; i < handLandmarkConnections.length; i++) {
         let [pointAIndex, pointBIndex] = handLandmarkConnections[i];
         let pointA = landmarks[pointAIndex];
         let pointB = landmarks[pointBIndex];
-        canvas.stroke("white");
-        canvas.strokeWeight(2);
+        canvas.stroke(255, 255, 255, 60);
+        canvas.strokeWeight(5);
         canvas.line(pointA.x * width, pointA.y * height, pointB.x * width, pointB.y * height);
     }
 }

@@ -109,7 +109,7 @@ class Particle {
         let index = x + y * fieldSettings.cols;
         if (index < fieldPoints.length && index >= 0) {
             let force = fieldPoints[index].vector;
-            this.applyForce(force.add(window.p.random(-0.1, 0.1)));
+            this.applyForce(force.add(window.p.random(-0.05, 0.05)));
             this.potential = fieldPoints[index].potential;
         } else {
             // let force = this.#defaultForce.set([width / 2 - this.pos.x, height / 2 - this.pos.y]);
@@ -121,10 +121,10 @@ class Particle {
         this.acc.add(force);
     }
 
-    show(sw) {
-        window.p.stroke(window.p.lerpColor(this.nc, this.pc, window.p.map(this.potential, -200, 100, 0, 1)));
-        window.p.strokeWeight(sw);
-        window.p.line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
+    show(sw, canvas) {
+        canvas.stroke(window.p.lerpColor(this.nc, this.pc, window.p.map(this.potential, -400, 150, 0, 1)));
+        canvas.strokeWeight(sw);
+        canvas.line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
         this.updatePrev();
     }
 

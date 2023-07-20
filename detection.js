@@ -56,11 +56,11 @@ function enableCam(event) {
     }
     if (webcamRunning === true) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE PREDICTIONS";
+        enableWebcamButton.innerText = "ENABLE HANDTRACKING";
     }
     else {
         webcamRunning = true;
-        enableWebcamButton.innerText = "DISABLE PREDICTIONS";
+        enableWebcamButton.innerText = "DISABLE HANDTRACKING";
     }
     // getUsermedia parameters.
     const constraints = {
