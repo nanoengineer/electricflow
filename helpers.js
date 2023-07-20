@@ -119,3 +119,68 @@ function drawPalmFill(landmarks, palmFill, canvas) {
     }
     canvas.endShape(window.p.CLOSE);
 }
+
+// circular buffer
+class CoordinatesCircularBuffer {
+    constructor(size) {
+        this.buffer = new Array(size);
+        this.size = size;
+        this.start = 0;
+        this.end = 0;
+        this.length = 0;
+        this.sum = window.p.createVector(0, 0);;
+    }
+
+    isFull() {
+        return this.length === this.size;
+    }
+
+    isEmpty() {
+        return this.length === 0;
+    }
+
+    enqueue(value) {
+        if (this.isFull()) {
+            // If the buffer is full, overwrite the oldest element
+            this.start = (this.start + 1) % this.size;
+        } else {
+            this.length++;
+        }
+
+        this.sum.add(value);
+        this.buffer[this.end] = value;
+        this.end = (this.end + 1) % this.size;
+    }
+
+    dequeue() {
+        if (this.isEmpty()) {
+            return undefined;
+        }
+
+        const value = this.buffer[this.start];
+        this.sum.sub(value);
+        this.start = (this.start + 1) % this.size;
+        this.length--;
+        return value;
+    }
+
+    peek() {
+        if (this.isEmpty()) {
+            return undefined;
+        }
+        return this.buffer[this.start];
+    }
+
+    clear() {
+        this.buffer.fill(null);
+        this.start = 0;
+        this.end = 0;
+        this.length = 0;
+    }
+
+    getAverage() {
+        return this.sum.div(this.buffer.length);
+    }
+}
+
+

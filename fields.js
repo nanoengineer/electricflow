@@ -83,6 +83,7 @@ class Charge {
 
 class Particle {
     #defaultForce = window.p.createVector(0, 0);
+    #infiniteRadius = window.p.sqrt((width / 2) ** 2 + (height / 2) ** 2);
     constructor(maxspeed) {
         this.pos = window.p.createVector(p.random(width), p.random(height));
         this.vel = window.p.createVector(0, 0);
@@ -107,13 +108,17 @@ class Particle {
         let x = window.p.floor(this.pos.x / step);
         let y = window.p.floor(this.pos.y / step);
         const index = x + y * fieldSettings.cols;
-        if (index < fieldPoints.length && index >= 0) {
-            let force = fieldPoints[index].vector;
-            this.applyForce(force.add(window.p.random(-0.05, 0.05)));
-            this.potential = fieldPoints[index].potential;
+        if (x <= width && x >= 0 && y <= height && y >= 0) {
+            if (index < fieldPoints.length && index >= 0) {
+                let force = fieldPoints[index].vector;
+                this.applyForce(force.add(window.p.random(-0.05, 0.05)));
+                this.potential = fieldPoints[index].potential;
+            }
         } else {
             // let force = this.#defaultForce.set([width / 2 - this.pos.x, height / 2 - this.pos.y]);
             // this.applyForce(force);
+            // this.potential = 100000000;
+
         }
     }
 
@@ -134,22 +139,22 @@ class Particle {
     }
 
     edges() {
-        if (this.pos.x > width && this.vel.x > 0) {
+        if (this.pos.x > width) {
             this.pos.x = 0;
             // this.updatePrev();
             // this.vel.set([0, 0]);
         }
-        if (this.pos.x < 0 && this.vel.x < 0) {
+        if (this.pos.x < 0) {
             this.pos.x = width;
             // this.updatePrev();
             // this.vel.set([0, 0]);
         }
-        if (this.pos.y > height && this.vel.y < 0) {
+        if (this.pos.y > height) {
             this.pos.y = 0;
             // this.updatePrev();
             // this.vel.set([0, 0]);
         }
-        if (this.pos.y < 0 && this.vel.y > 0) {
+        if (this.pos.y < 0) {
             this.pos.y = height;
             // this.updatePrev();
             // this.vel.set([0, 0]);
@@ -157,27 +162,25 @@ class Particle {
     }
 
     sinks(sinkValue) {
-        //particle is in a potential sink, source it from corner of screen
+        //particle is in a potential sink, source it from edge of screen
         if (this.potential < 0.90 * sinkValue) {
             let edge = window.p.random([0, 1, 2, 3]);
             if (edge % 2 == 0) {
-                this.pos.x = window.p.random([0, width]);
-                this.pos.y = window.p.random(0, height);
+                this.pos.x = window.p.random([0 + 1, width - 1]);
+                this.pos.y = window.p.random(0 + 1, height - 1);
             } else {
-                this.pos.x = window.p.random(0, width);
-                this.pos.y = window.p.random([0, height - 1]);
+                this.pos.x = window.p.random(0 + 1, width - 1);
+                this.pos.y = window.p.random([0 + 1, height - 1]);
             }
-            // this.updatePrev();
+            // let theta = window.p.random(0, window.p.PI * 2);
+            // // this.pos.x = this.#infiniteRadius * window.p.cos(theta) + width / 2;
+            // // this.pos.y = this.#infiniteRadius * window.p.sin(theta) + height / 2;
+            // this.pos.x = (height / 2 + 50) * window.p.cos(theta) + width / 2;
+            // this.pos.y = (height / 2 + 50) * window.p.sin(theta) + height / 2;
+            // let force = this.#defaultForce.set([width / 2 - this.pos.x, height / 2 - this.pos.y]);
+            // this.applyForce(force);
+            // // this.updatePrev();
         }
-        // const delta = 5;
-        // for (const charge of charges) {
-        //     if (this.pos.x > charge.position.x - delta && this.pos.x < charge.position.x + delta && this.pos.y > charge.position.y - delta && this.pos.y < charge.position.y + delta && charge.chargeMag < 0) {
-        //         this.pos.x = window.p.random(0, 5);
-        //         this.pos.y = window.p.random(0, 5);
-        //         this.updatePrev();
-        //         break;
-        //     }
-        // }
     }
 
 }
