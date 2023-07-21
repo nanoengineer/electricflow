@@ -38,14 +38,17 @@ let sketch = function (p) {
         showHand: false,
         showFrameRate: false,
         palmControlsAmbientCharges: false,
-        nColor: window.p.color("#2e005e"),
-        pColor: window.p.color("#cd8fe3"),
+        // nColor: window.p.color("#2e005e"),
+        // pColor: window.p.color("#cd8fe3"),
+        nColor: window.p.color("#07c7e0"),
+        pColor: window.p.color("#016069"),
         particleMaxSpeedScaler: 10,
-        perlinNoiseTimeStep: 0.1,
+        perlinNoiseTimeStep: 0.2,
         chargeMagnitude: 0.2,
+        handChargeMultiplier: 3,
         chargeFlip: 1,
         numOfAmbientCharges: 8,
-        numOfFingerCharges: 0
+        numOfFingerCharges: 1
     };
 
     let uxSettings = Object.create(InteractionSettings);
@@ -64,6 +67,8 @@ let sketch = function (p) {
         canvas = p.createCanvas(width, height);
         window.particleGraphics = p.createGraphics(width, height);
         window.handGraphics = p.createGraphics(width, height);
+        window.blurGraphics = p.createGraphics(width, height);
+
 
 
         // //Setting up electric field
@@ -158,6 +163,7 @@ let sketch = function (p) {
             //Calculate compactness of finger tips
             fingersCompactBuffer.enqueue(calculateCompactnessEuclidean([wlm[4], wlm[8], wlm[12], wlm[16], wlm[20]]));
             const smoothedCompactness = fingersCompactBuffer.getAverage();
+            console.log(smoothedCompactness);
             uxSettings.particleMaxSpeedScaler = p.map(smoothedCompactness, 0.02, 0.06, 1, 18);
 
             uxSettings.chargeFlip = p.map(palmOrient, 0, 1, -1, 1);
@@ -167,7 +173,7 @@ let sketch = function (p) {
             }
 
             if (uxSettings.numOfFingerCharges > 0) {
-                setHandCharges(uxSettings, smoothedHandLandmarks, p.map(palmOrient, 1, 0, -0.1, 0.1));
+                setHandCharges(uxSettings, smoothedHandLandmarks, uxSettings.chargeMagnitude * uxSettings.handChargeMultiplier);
             }
         }
         else {
@@ -180,9 +186,9 @@ let sketch = function (p) {
         runParticlesEngine(cParticles, charges, 3, particleGraphics);
         runParticlesEngine(dParticles, charges, 2, particleGraphics);
 
-
         p.drawingContext.filter = 'blur(2px)';
         p.image(particleGraphics, 0, 0);
+        p.drawingContext.filter = 'blur(50px)';
         p.image(handGraphics, 0, 0);
         p.drawingContext.filter = 'blur(0px)';
         if (uxSettings.showFrameRate) {
@@ -201,10 +207,10 @@ let sketch = function (p) {
             uxSettings.showFrameRate = !uxSettings.showFrameRate;
         }
         if (key.key == "ArrowUp") {
-            uxSettings.perlinNoiseTimeStep += 0.001;
+            uxSettings.handChargeMultiplier += 1;
         }
         if (key.key == "ArrowDown") {
-            uxSettings.perlinNoiseTimeStep -= 0.001;
+            uxSettings.handChargeMultiplier -= 1;
         }
         return false;
     };
@@ -244,9 +250,9 @@ let sketch = function (p) {
             particles[i].followField(charges);
             particles[i].maxspeed = dotSize * uxSettings.particleMaxSpeedScaler;
             particles[i].update();
-            particles[i].edges();
+            particles[i].edges(10);
             particles[i].show(canvas);
-            particles[i].sinks(charges, indices);
+            particles[i].sinks(charges, indices); //sinks affect the NEXT frame of animation after show
         }
     }
 
@@ -263,9 +269,11 @@ let sketch = function (p) {
     //Setting and clear charges attached to hand
 
     function setHandCharges(settings, lm, value) {
+        let palmCentroid = calculateCentroid([lm[0], lm[1], lm[5], lm[17]]);
         for (let i = settings.numOfAmbientCharges; i < settings.numOfAmbientCharges + settings.numOfFingerCharges; i++) {
-            charges[i].position.set([lm[(i - settings.numOfAmbientCharges + 1) * 4].x * width, lm[(i - settings.numOfAmbientCharges + 1) * 4].y * height]);
-            charges[i].charge = value;
+            // charges[i].position.set([lm[(i - settings.numOfAmbientCharges + 1) * 4].x * width, lm[(i - settings.numOfAmbientCharges + 1) * 4].y * height]);
+            charges[i].position.set(palmCentroid.x * width, palmCentroid.y * height);
+            charges[i].charge = -value * settings.chargeFlip;
         }
     }
     function clearHandCharges(settings, charges) {

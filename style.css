@@ -21,6 +21,10 @@ limitations under the License. */
   --mdc-theme-on-primary: #f1f3f4;
 } */
 
+html {
+  background-color: black
+}
+
 h1 {
   color: #007f8b;
 }

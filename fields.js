@@ -138,7 +138,6 @@ class Particle {
     show(canvas) {
         canvas.stroke(window.p.lerpColor(this.nColor, this.pColor, window.p.map(this.potential, -400, 400, 0, 1)));
         canvas.line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
-        // canvas.point(this.pos.x, this.pos.y);
         this.updatePrev();
     }
 
@@ -161,24 +160,24 @@ class Particle {
         this.prevPos.set(this.pos);
     }
 
-    edges() {
-        if (this.pos.x > width) {
-            this.vel.set(0, 0);
+    edges(border) {
+        if (this.pos.x > width + border) {
+            this.pos.x = 0 - border;
             this.updatePrev();
 
         }
-        if (this.pos.x < 0) {
-            this.pos.x = width;
+        if (this.pos.x < 0 - border) {
+            this.pos.x = width + border;
             this.updatePrev();
 
         }
-        if (this.pos.y > height) {
-            this.pos.y = 0;
+        if (this.pos.y > height + border) {
+            this.pos.y = 0 - border;
             this.updatePrev();
 
         }
-        if (this.pos.y < 0) {
-            this.pos.y = height;
+        if (this.pos.y < 0 - border) {
+            this.pos.y = height + border;
             this.updatePrev();
         }
     }
