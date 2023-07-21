@@ -96,14 +96,14 @@ function drawFingerTipLandmarks(handLandmarks, landmarkColor, canvas) {
     }
 }
 
-function drawHandConnections(landmarks, canvas) {
+function drawHandConnections(landmarks, canvas, fc) {
     // Draw connections between landmarks
     for (let i = 0; i < handLandmarkConnections.length; i++) {
         let [pointAIndex, pointBIndex] = handLandmarkConnections[i];
         let pointA = landmarks[pointAIndex];
         let pointB = landmarks[pointBIndex];
-        canvas.stroke(255, 255, 255, 60);
-        canvas.strokeWeight(5);
+        canvas.stroke(fc);
+        canvas.strokeWeight(20);
         canvas.line(pointA.x * width, pointA.y * height, pointB.x * width, pointB.y * height);
     }
 }
@@ -120,7 +120,70 @@ function drawPalmFill(landmarks, palmFill, canvas) {
     canvas.endShape(window.p.CLOSE);
 }
 
-// circular buffer
+// CircularBuffer
+class CircularBuffer {
+    constructor(size) {
+        this.buffer = new Array(size);
+        this.size = size;
+        this.start = 0;
+        this.end = 0;
+        this.length = 0;
+        this.sum = 0;
+    }
+
+    isFull() {
+        return this.length === this.size;
+    }
+
+    isEmpty() {
+        return this.length === 0;
+    }
+
+    enqueue(value) {
+        if (this.isFull()) {
+            // If the buffer is full, overwrite the oldest element. Remove it from the sum
+            this.sum -= this.buffer[this.start];
+            this.start = (this.start + 1) % this.size;
+        } else {
+            this.length++;
+        }
+
+        this.sum += (value);
+        this.buffer[this.end] = value;
+        this.end = (this.end + 1) % this.size;
+    }
+
+    dequeue() {
+        if (this.isEmpty()) {
+            return undefined;
+        }
+
+        const value = this.buffer[this.start];
+        this.sum -= value;
+        this.start = (this.start + 1) % this.size;
+        this.length--;
+        return value;
+    }
+
+    peek() {
+        if (this.isEmpty()) {
+            return undefined;
+        }
+        return this.buffer[this.start];
+    }
+
+    clear() {
+        this.buffer.fill(null);
+        this.start = 0;
+        this.end = 0;
+        this.length = 0;
+    }
+
+    getAverage() {
+        return this.sum / this.buffer.length;
+    }
+}
+
 class CoordinatesCircularBuffer {
     constructor(size) {
         this.buffer = new Array(size);

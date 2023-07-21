@@ -26,7 +26,6 @@ let sketch = function (p) {
     let leftHandColor = p.color("#4cbcf5");
     let rightHandColor = p.color("#f5823b");
 
-    let fieldPoints = [];
     let charges = [];
 
     let aParticles = [];
@@ -38,18 +37,18 @@ let sketch = function (p) {
     const InteractionSettings = {
         showHand: false,
         showFrameRate: false,
-        palmControlsAmbientCharges: false
-    };
-
-    //Field Matrix
-    const FieldSettings = {
+        palmControlsAmbientCharges: false,
+        nColor: window.p.color("#4e1e9c"),
+        pColor: window.p.color("#cd8fe3"),
+        particleMaxSpeedScaler: 10,
+        perlinNoiseTimeStep: 0.01,
+        chargeMagnitude: 0.1,
+        chargeFlip: 1,
         numOfAmbientCharges: 8,
-        numOfFingerCharges: 5,
+        numOfFingerCharges: 0
     };
 
-    let fieldSettings = Object.create(FieldSettings);
-    let interactionSettings = Object.create(InteractionSettings);
-
+    let uxSettings = Object.create(InteractionSettings);
 
     //For perlin noise
     let t = 0;
@@ -58,6 +57,8 @@ let sketch = function (p) {
     const rollingWindowSize = 3;
     let handCoordinatesBuffer = [];
     let smoothedHandLandmarks = [];
+
+    let fingersCompactBuffer = new CircularBuffer(rollingWindowSize);
 
     p.setup = function () {
         canvas = p.createCanvas(width, height);
@@ -75,24 +76,28 @@ let sketch = function (p) {
         // }
 
         //Setting up charges
-        for (let i = 0; i < fieldSettings.numOfAmbientCharges + fieldSettings.numOfFingerCharges; i++) {
+        for (let i = 0; i < uxSettings.numOfAmbientCharges + uxSettings.numOfFingerCharges; i++) {
             charges.push(new Charge(0, 0, 0));
         }
 
+        let N = 1000;
+        let nc = uxSettings.nColor;
+        let pc = uxSettings.pColor;
+        let scl = uxSettings.particleMaxSpeedScaler;
         //Setting up particles
-        for (let i = 0; i < 1000; i++) {
-            aParticles[i] = new Particle(60);
+        for (let i = 0; i < N; i++) {
+            aParticles[i] = new Particle(6 * scl, nc, pc);
         }
-        for (let i = 0; i < 1000; i++) {
-            bParticles[i] = new Particle(50);
-        }
-
-        for (let i = 0; i < 1000; i++) {
-            cParticles[i] = new Particle(40);
+        for (let i = 0; i < N; i++) {
+            bParticles[i] = new Particle(5 * scl, nc, pc);
         }
 
-        for (let i = 0; i < 1000; i++) {
-            dParticles[i] = new Particle(30);
+        for (let i = 0; i < N; i++) {
+            cParticles[i] = new Particle(4 * scl, nc, pc);
+        }
+
+        for (let i = 0; i < N; i++) {
+            dParticles[i] = new Particle(3 * scl, nc, pc);
         }
 
         //setting up hand coordinate rolling window
@@ -110,22 +115,22 @@ let sketch = function (p) {
 
     p.draw = function () {
         p.background(0);
-        particleGraphics.background(0, 20);
+        particleGraphics.background(0, 10);
         handGraphics.clear();
 
-        t = t + 0.004;
+        t = t + uxSettings.perlinNoiseTimeStep / (p.frameRate() + 0.001);;
 
         //Only evolve the ambient charges
-        for (let i = 0; i < fieldSettings.numOfAmbientCharges; i++) {
+        for (let i = 0; i < uxSettings.numOfAmbientCharges; i++) {
             let polarity = 1;
             let x = p.noise(t + 5 + i) * 1.2 * width - 0.1 * width;
-            let y = p.noise(t + 80 + i) * 1.2 * height - 0.1 * height;
+            let y = p.noise(t + 10 + i) * 1.2 * height - 0.1 * height;
             charges[i].position.set([x, y]);
             //even index charges are sources, odd are sinks. 
             if ((i % 2) == 1) {
                 polarity = -1;
             }
-            charges[i].charge = p.noise(t + 20 * i) * (0.4) * (polarity)
+            charges[i].charge = p.noise(t + 20 * i) * (0.2) * (polarity * uxSettings.chargeFlip)
             // if (i == 0) {
             //     charges[i].draw(particleGraphics);
             // }
@@ -138,71 +143,53 @@ let sketch = function (p) {
         let results = window.handDetectionResults;
 
         if (handResultValid(results)) {
-            //Handedness seems to be reversed, a bit of hacking to get the correct colors
-            if (results.handednesses.length == 2) {
-                for (const hand of results.handednesses) {
-                    let dotColor = leftHandColor;
-                    if (hand[0].categoryName == "Right") {
-                        dotColor = rightHandColor;
-                    }
-                    const lm = results.landmarks[(hand[0].index)];
-                    const wlm = results.worldLandmarks[(hand[0].index)];
-                    const palmFill = p.lerpColor(p.color("#FF0000"), p.color("#0000FF"), getPalmOrientation(wlm, hand[0].categoryName));
-                    // drawPalmFill(lm, palmFill);
-                    // drawHandConnections(lm);
-                    // drawHandLandmarks(lm, dotColor);
-                }
-            } else if (results.handednesses.length == 1) {
-                let hand = results.handednesses[0][0];
-                let dotColor = leftHandColor;
-                if (hand.categoryName == 'Right') {
-                    dotColor = rightHandColor;
-                }
-                const lm = results.landmarks[0];
-                const palmOrient = getPalmOrientation(results.worldLandmarks[0], hand.categoryName)
-                // const palmFill = p.lerpColor(p.color("#FF0000"), p.color("#0000FF"), palmOrient);
-                // drawPalmFill(lm, palmFill);
+            let hand = results.handednesses[0][0];
+            let dotColor = leftHandColor;
+            if (hand.categoryName == 'Right') {
+                dotColor = rightHandColor;
+            }
+            const lm = results.landmarks[0];
+            const wlm = results.worldLandmarks[0];
 
-                const nc = window.p.color("#a9f702");
-                const pc = window.p.color("#0260f7");
+            for (let i = 0; i < lm.length; i++) {
+                handCoordinatesBuffer[i].enqueue([lm[i].x, lm[i].y]);
+                smoothedHandLandmarks[i].set(handCoordinatesBuffer[i].getAverage());
+            }
 
-                const tipColor = p.lerpColor(nc, pc, palmOrient);
+            const palmOrient = getPalmOrientation(wlm, hand.categoryName);
+            const fieldColor = p.lerpColor(uxSettings.pColor, uxSettings.nColor, palmOrient);
 
-                for (let i = 0; i < lm.length; i++) {
-                    handCoordinatesBuffer[i].enqueue([lm[i].x, lm[i].y]);
-                    smoothedHandLandmarks[i].set(handCoordinatesBuffer[i].getAverage());
-                }
+            //Calculate compactness of finger tips
+            fingersCompactBuffer.enqueue(calculateCompactnessEuclidean([wlm[4], wlm[8], wlm[12], wlm[16], wlm[20]]));
+            const smoothedCompactness = fingersCompactBuffer.getAverage();
+            uxSettings.particleMaxSpeedScaler = p.map(smoothedCompactness, 0.02, 0.06, 1, 11);
 
-                if (interactionSettings.showHand) {
-                    drawHandConnections(smoothedHandLandmarks, handGraphics);
-                }
+            uxSettings.chargeFlip = p.map(palmOrient, 0, 1, -1, 1);
 
-                setHandCharges(fieldSettings, smoothedHandLandmarks, p.map(palmOrient, 1, 0, -0.1, 0.1));
+            if (uxSettings.showHand) {
+                drawHandConnections(smoothedHandLandmarks, handGraphics, fieldColor);
+            }
+
+            if (uxSettings.numOfFingerCharges > 0) {
+                setHandCharges(uxSettings, smoothedHandLandmarks, p.map(palmOrient, 1, 0, -0.1, 0.1));
             }
         }
         else {
-            clearHandCharges(fieldSettings, charges);
+            clearHandCharges(uxSettings, charges);
         }
 
-        // for (fp of fieldPoints) {
-        //     fp.update(charges);
-        //     if (fp.potential < sinkVal) {
-        //         sinkVal = fp.potential;
-        //     }
-        //     if (fp.potential > sourceVal) {
-        //         sourceVal = fp.potential;
-        //     }
-        // }
 
-        runParticlesEngine(aParticles, charges, 4, particleGraphics);
-        runParticlesEngine(bParticles, charges, 3, particleGraphics);
-        runParticlesEngine(cParticles, charges, 2, particleGraphics);
-        runParticlesEngine(dParticles, charges, 1, particleGraphics);
+        runParticlesEngine(aParticles, charges, 5, particleGraphics);
+        runParticlesEngine(bParticles, charges, 4, particleGraphics);
+        runParticlesEngine(cParticles, charges, 3, particleGraphics);
+        runParticlesEngine(dParticles, charges, 2, particleGraphics);
 
 
+        p.drawingContext.filter = 'blur(2px)';
         p.image(particleGraphics, 0, 0);
         p.image(handGraphics, 0, 0);
-        if (interactionSettings.showFrameRate) {
+        p.drawingContext.filter = 'blur(0px)';
+        if (uxSettings.showFrameRate) {
             showFrameRate();
         }
         // for (fp of fieldPoints) {
@@ -212,10 +199,10 @@ let sketch = function (p) {
 
     p.keyPressed = function (key) {
         if (key.key == "h") {
-            interactionSettings.showHand = !interactionSettings.showHand;
+            uxSettings.showHand = !uxSettings.showHand;
         }
         if (key.key == "f") {
-            interactionSettings.showFrameRate = !interactionSettings.showFrameRate;
+            uxSettings.showFrameRate = !uxSettings.showFrameRate;
         }
     };
 
@@ -235,15 +222,10 @@ let sketch = function (p) {
         p.pop();
     }
 
-    function setTestField(x, y) {
-        for (ch of charges) {
-            ch.chargeMag = 0;
-        }
-    }
 
     function setTestCharge(c) {
         // For Debugging
-        for (let i = 0; i < fieldSettings.numOfAmbientCharges; i++) {
+        for (let i = 0; i < uxSettings.numOfAmbientCharges; i++) {
             let x = 0.5 * width;
             let y = 0.5 * height;
             charges[i].position = p.createVector(x, y);
@@ -254,13 +236,25 @@ let sketch = function (p) {
     //Running the particle engine and show it
     function runParticlesEngine(particles, charges, dotSize, canvas) {
         canvas.strokeWeight(dotSize);
+        const indices = getSourceIndices(charges);
         for (var i = 0; i < particles.length; i++) {
             particles[i].followField(charges);
+            particles[i].maxspeed = dotSize * uxSettings.particleMaxSpeedScaler;
             particles[i].update();
             particles[i].edges();
             particles[i].show(canvas);
-            particles[i].sinks(charges);
+            particles[i].sinks(charges, indices);
         }
+    }
+
+    function getSourceIndices(charges) {
+        let indices = [];
+        for (let i = 0; i < charges.length; i++) {
+            if (charges[i].chargeMag > 0) {
+                indices.push(i);
+            }
+        }
+        return indices;
     }
 
     //Setting and clear charges attached to hand

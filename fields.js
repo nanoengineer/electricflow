@@ -23,14 +23,6 @@ class FieldPoint {
         window.p.line(this.pos.x, this.pos.y, this.pos.x - this.unitVector.x * vectorDrawLength, this.pos.y - this.unitVector.y * vectorDrawLength)
     }
 
-    set negColor(nc) {
-        this.negativeColor = nc;
-    }
-
-    set posColor(pc) {
-        this.positiveColor = pc;
-    }
-
     #updateElectricFieldandPotential(charges, point) {
 
         const k = 100000;
@@ -85,17 +77,16 @@ class Charge {
 
 class Particle {
     #privateVector1 = window.p.createVector(0, 0);
-    #infiniteRadius = window.p.sqrt((width / 2) ** 2 + (height / 2) ** 2);
-    constructor(maxspeed) {
+
+    constructor(maxspeed, nc, pc) {
         this.pos = window.p.createVector(p.random(width), p.random(height));
         this.vel = window.p.createVector(0, 0);
         this.acc = window.p.createVector(0, 0);
         this.maxspeed = maxspeed; //pixels/second
         this.prevPos = this.pos.copy();
         this.potential = 0;
-        this.nc = window.p.color("#a9f702");
-        this.pc = window.p.color("#0260f7");
-
+        this.nColor = nc;
+        this.pColor = pc;
     }
 
     update() {
@@ -145,11 +136,14 @@ class Particle {
     }
 
     show(canvas) {
-        // if (this.#isWithinCanvas(this.pos)) {
-        //     canvas.stroke(window.p.lerpColor(this.nc, this.pc, window.p.map(this.potential, -400, 150, 0, 1)));
-        //     canvas.line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
-        // }
-        canvas.stroke(window.p.lerpColor(this.nc, this.pc, window.p.map(this.potential, -400, 150, 0, 1)));
+        canvas.stroke(window.p.lerpColor(this.nColor, this.pColor, window.p.map(this.potential, -400, 400, 0, 1)));
+        canvas.line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
+        // canvas.point(this.pos.x, this.pos.y);
+        this.updatePrev();
+    }
+
+    showWhite(canvas) {
+        canvas.stroke(255);
         canvas.line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
         // canvas.point(this.pos.x, this.pos.y);
         this.updatePrev();
@@ -189,17 +183,19 @@ class Particle {
         }
     }
 
-    sinks(charges) {
+    sinks(charges, sourcesIndices) {
         //if particle is within 1 px of a sink
-        const source = charges[0];
-        for (const ch of charges) {
-            if (ch.chargeMag < 0 && window.p.abs(this.pos.x - ch.pos.x) <= 4 && window.p.abs(this.pos.y - ch.pos.y) <= 4) {
-                this.pos.x = source.pos.x + window.p.random(-2, 2);
-                this.pos.y = source.pos.y + window.p.random(-2, 2);
-                // this.acc.set([0, 0]);
-                // this.vel.set([0, 0]);
-                this.updatePrev();
-                break;
+        if (sourcesIndices.length != 0) {
+            const source = charges[window.p.random(sourcesIndices)];
+            for (const ch of charges) {
+                if (ch.chargeMag < 0 && window.p.abs(this.pos.x - ch.pos.x) <= 4 && window.p.abs(this.pos.y - ch.pos.y) <= 4) {
+                    this.pos.x = source.pos.x + window.p.random(-2, 2);
+                    this.pos.y = source.pos.y + window.p.random(-2, 2);
+                    // this.acc.set([0, 0]);
+                    // this.vel.set([0, 0]);
+                    this.updatePrev();
+                    break;
+                }
             }
         }
     }
