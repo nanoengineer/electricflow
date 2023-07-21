@@ -1,6 +1,6 @@
 let canvas;
-let width = document.getElementById("video").width * 2;
-let height = document.getElementById("video").height * 2;
+let width = document.getElementById("video").width * 4;
+let height = document.getElementById("video").height * 4;
 
 
 
@@ -38,11 +38,11 @@ let sketch = function (p) {
         showHand: false,
         showFrameRate: false,
         palmControlsAmbientCharges: false,
-        nColor: window.p.color("#4e1e9c"),
+        nColor: window.p.color("#2e005e"),
         pColor: window.p.color("#cd8fe3"),
         particleMaxSpeedScaler: 10,
-        perlinNoiseTimeStep: 0.01,
-        chargeMagnitude: 0.1,
+        perlinNoiseTimeStep: 0.1,
+        chargeMagnitude: 0.2,
         chargeFlip: 1,
         numOfAmbientCharges: 8,
         numOfFingerCharges: 0
@@ -115,7 +115,7 @@ let sketch = function (p) {
 
     p.draw = function () {
         p.background(0);
-        particleGraphics.background(0, 10);
+        particleGraphics.background(0, 5 + uxSettings.particleMaxSpeedScaler);
         handGraphics.clear();
 
         t = t + uxSettings.perlinNoiseTimeStep / (p.frameRate() + 0.001);;
@@ -130,11 +130,7 @@ let sketch = function (p) {
             if ((i % 2) == 1) {
                 polarity = -1;
             }
-            charges[i].charge = p.noise(t + 20 * i) * (0.2) * (polarity * uxSettings.chargeFlip)
-            // if (i == 0) {
-            //     charges[i].draw(particleGraphics);
-            // }
-
+            charges[i].charge = p.noise(t + 20 * i) * (uxSettings.chargeMagnitude) * (polarity * uxSettings.chargeFlip)
         }
 
         // setTestCharge(-0.5);
@@ -162,7 +158,7 @@ let sketch = function (p) {
             //Calculate compactness of finger tips
             fingersCompactBuffer.enqueue(calculateCompactnessEuclidean([wlm[4], wlm[8], wlm[12], wlm[16], wlm[20]]));
             const smoothedCompactness = fingersCompactBuffer.getAverage();
-            uxSettings.particleMaxSpeedScaler = p.map(smoothedCompactness, 0.02, 0.06, 1, 11);
+            uxSettings.particleMaxSpeedScaler = p.map(smoothedCompactness, 0.02, 0.06, 1, 18);
 
             uxSettings.chargeFlip = p.map(palmOrient, 0, 1, -1, 1);
 
@@ -204,6 +200,13 @@ let sketch = function (p) {
         if (key.key == "f") {
             uxSettings.showFrameRate = !uxSettings.showFrameRate;
         }
+        if (key.key == "ArrowUp") {
+            uxSettings.perlinNoiseTimeStep += 0.001;
+        }
+        if (key.key == "ArrowDown") {
+            uxSettings.perlinNoiseTimeStep -= 0.001;
+        }
+        return false;
     };
 
     //Show framerate
