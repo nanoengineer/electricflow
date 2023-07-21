@@ -128,7 +128,7 @@ class CoordinatesCircularBuffer {
         this.start = 0;
         this.end = 0;
         this.length = 0;
-        this.sum = window.p.createVector(0, 0);;
+        this.sum = window.p.createVector(0, 0);
     }
 
     isFull() {
@@ -141,7 +141,8 @@ class CoordinatesCircularBuffer {
 
     enqueue(value) {
         if (this.isFull()) {
-            // If the buffer is full, overwrite the oldest element
+            // If the buffer is full, overwrite the oldest element. Remove it from the sum
+            this.sum.sub(this.buffer[this.start]);
             this.start = (this.start + 1) % this.size;
         } else {
             this.length++;
@@ -179,7 +180,7 @@ class CoordinatesCircularBuffer {
     }
 
     getAverage() {
-        return this.sum.div(this.buffer.length);
+        return p5.Vector.div(this.sum, this.buffer.length);
     }
 }
 

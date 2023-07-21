@@ -29,8 +29,10 @@ let sketch = function (p) {
     let fieldPoints = [];
     let charges = [];
 
-    let lParticles = [];
-    let sParticles = [];
+    let aParticles = [];
+    let bParticles = [];
+    let cParticles = [];
+    let dParticles = [];
 
     //Interaction settings
     const InteractionSettings = {
@@ -43,15 +45,9 @@ let sketch = function (p) {
     const FieldSettings = {
         numOfAmbientCharges: 8,
         numOfFingerCharges: 5,
-        pixelsPerStep: 10,
-        cols: 0,
-        rows: 0
     };
 
     let fieldSettings = Object.create(FieldSettings);
-    fieldSettings.cols = (width / fieldSettings.pixelsPerStep);
-    fieldSettings.rows = (height / fieldSettings.pixelsPerStep)
-
     let interactionSettings = Object.create(InteractionSettings);
 
 
@@ -59,7 +55,7 @@ let sketch = function (p) {
     let t = 0;
 
     //Rolling window for smoothing hand coordinates
-    const rollingWindowSize = 5;
+    const rollingWindowSize = 3;
     let handCoordinatesBuffer = [];
     let smoothedHandLandmarks = [];
 
@@ -69,30 +65,37 @@ let sketch = function (p) {
         window.handGraphics = p.createGraphics(width, height);
 
 
-        //Setting up electric field
-        const fieldDensity = fieldSettings.pixelsPerStep;
+        // //Setting up electric field
+        // const fieldDensity = fieldSettings.pixelsPerStep;
 
-        for (let i = 0; i < fieldSettings.rows; i++) {
-            for (let j = 0; j < fieldSettings.cols; j++) {
-                fieldPoints.push(new FieldPoint(j * fieldDensity, i * fieldDensity, p));
-            }
-        }
+        // for (let i = 0; i < fieldSettings.rows; i++) {
+        //     for (let j = 0; j < fieldSettings.cols; j++) {
+        //         fieldPoints.push(new FieldPoint(j * fieldDensity, i * fieldDensity, p));
+        //     }
+        // }
 
         //Setting up charges
         for (let i = 0; i < fieldSettings.numOfAmbientCharges + fieldSettings.numOfFingerCharges; i++) {
-            charges.push(new Charge(0, 0, 0, p));
+            charges.push(new Charge(0, 0, 0));
         }
 
         //Setting up particles
-        for (let i = 0; i < 2000; i++) {
-            lParticles[i] = new Particle(60);
+        for (let i = 0; i < 1000; i++) {
+            aParticles[i] = new Particle(60);
         }
-        for (let i = 0; i < 2000; i++) {
-            sParticles[i] = new Particle(50);
+        for (let i = 0; i < 1000; i++) {
+            bParticles[i] = new Particle(50);
+        }
+
+        for (let i = 0; i < 1000; i++) {
+            cParticles[i] = new Particle(40);
+        }
+
+        for (let i = 0; i < 1000; i++) {
+            dParticles[i] = new Particle(30);
         }
 
         //setting up hand coordinate rolling window
-
         for (let i = 0; i < 21; i++) {
             handCoordinatesBuffer.push(new CoordinatesCircularBuffer(rollingWindowSize));
             smoothedHandLandmarks.push(p.createVector(0, 0));
@@ -122,8 +125,11 @@ let sketch = function (p) {
             if ((i % 2) == 1) {
                 polarity = -1;
             }
-            // Sources are more powerful
-            charges[i].charge = p.noise(t + 20 * i) * 0.3 * (polarity) - polarity * 0.1;
+            charges[i].charge = p.noise(t + 20 * i) * (0.4) * (polarity)
+            // if (i == 0) {
+            //     charges[i].draw(particleGraphics);
+            // }
+
         }
 
         // setTestCharge(-0.5);
@@ -163,41 +169,35 @@ let sketch = function (p) {
                 const tipColor = p.lerpColor(nc, pc, palmOrient);
 
                 for (let i = 0; i < lm.length; i++) {
-                    handCoordinatesBuffer[i].enqueue(lm[i]);
+                    handCoordinatesBuffer[i].enqueue([lm[i].x, lm[i].y]);
                     smoothedHandLandmarks[i].set(handCoordinatesBuffer[i].getAverage());
                 }
 
                 if (interactionSettings.showHand) {
-                    drawHandConnections(lm, handGraphics);
+                    drawHandConnections(smoothedHandLandmarks, handGraphics);
                 }
 
-                setHandCharges(fieldSettings, lm, p.map(palmOrient, 1, 0, -0.07, 0.07));
+                setHandCharges(fieldSettings, smoothedHandLandmarks, p.map(palmOrient, 1, 0, -0.1, 0.1));
             }
         }
         else {
             clearHandCharges(fieldSettings, charges);
         }
 
-        let sinkVal = 0;
-        let sourceVal = 0;
-        for (fp of fieldPoints) {
-            fp.update(charges);
-            if (fp.potential < sinkVal) {
-                sinkVal = fp.potential;
-            }
-            if (fp.potential > sourceVal) {
-                sourceVal = fp.potential;
-            }
-        }
-
-        // setTestField(-1, -1);
-
-        // for (ch of charges) {
-        //     ch.draw();
+        // for (fp of fieldPoints) {
+        //     fp.update(charges);
+        //     if (fp.potential < sinkVal) {
+        //         sinkVal = fp.potential;
+        //     }
+        //     if (fp.potential > sourceVal) {
+        //         sourceVal = fp.potential;
+        //     }
         // }
 
-        runParticlesEngine(lParticles, fieldPoints, fieldSettings, 4, sinkVal, particleGraphics);
-        runParticlesEngine(sParticles, fieldPoints, fieldSettings, 3, sinkVal, particleGraphics);
+        runParticlesEngine(aParticles, charges, 4, particleGraphics);
+        runParticlesEngine(bParticles, charges, 3, particleGraphics);
+        runParticlesEngine(cParticles, charges, 2, particleGraphics);
+        runParticlesEngine(dParticles, charges, 1, particleGraphics);
 
 
         p.image(particleGraphics, 0, 0);
@@ -252,14 +252,14 @@ let sketch = function (p) {
     }
 
     //Running the particle engine and show it
-    function runParticlesEngine(particles, fieldPoints, fieldSettings, dotSize, sinkVal, canvas) {
+    function runParticlesEngine(particles, charges, dotSize, canvas) {
         canvas.strokeWeight(dotSize);
         for (var i = 0; i < particles.length; i++) {
-            particles[i].follow(fieldPoints, fieldSettings);
+            particles[i].followField(charges);
             particles[i].update();
             particles[i].edges();
-            particles[i].sinks(sinkVal);
             particles[i].show(canvas);
+            particles[i].sinks(charges);
         }
     }
 
