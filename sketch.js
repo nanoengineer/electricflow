@@ -4,8 +4,11 @@ import { enableCam } from './detection.js';
 
 //make p global so other classes can call p5.js functions
 window.p = undefined;
-window.width = document.getElementById("video").width * 8;
-window.height = document.getElementById("video").height * 8;
+// window.width = document.getElementById("video").width * 8;
+// window.height = document.getElementById("video").height * 8;
+
+window.width = window.innerWidth;
+window.height = window.innerHeight;
 
 
 let sketch = function (p) {
@@ -14,9 +17,6 @@ let sketch = function (p) {
     //additional graphics canvasses
     let particleGraphics = undefined;
     let handGraphics = undefined;
-
-    let width = window.width;
-    let height = window.height;
 
     let leftHandColor = p.color("#4cbcf5");
     let rightHandColor = p.color("#f5823b");
@@ -215,7 +215,7 @@ let sketch = function (p) {
         if (key.key == "h") {
             uxSettings.showHand = !uxSettings.showHand;
         }
-        if (key.key == "f") {
+        if (key.key == "r") {
             uxSettings.showFrameRate = !uxSettings.showFrameRate;
         }
         if (key.key == "ArrowUp") {
@@ -227,13 +227,37 @@ let sketch = function (p) {
         if (key.key == "c") {
             enableCam(null);
         }
+        if (key.key == "f") {
+            let fs = p.fullscreen();
+            if (!fs) {
+                updateSketchSize(p.displayWidth, p.displayHeight);
+            } else {
+                updateSketchSize(p.windowWidth, p.windowHeight);
+            }
+            p.fullscreen(!fs);
+        }
         return false;
     };
+
+    p.windowResized = function () {
+        // Resize the canvas to match the new window dimensions
+        updateSketchSize(p.windowWidth, p.windowHeight);
+    }
+
+    function updateSketchSize(w, h) {
+        p.resizeCanvas(w, h);
+        window.width = w;
+        window.height = h; //update the global width height variables for p5.js 
+        width = w;
+        height = h;
+        particleGraphics = p.createGraphics(w, h);
+        handGraphics = p.createGraphics(w, h);
+    }
 
     //Show framerate
     function showFrameRate() {
         let fps = p.frameRate();
-        p.textSize(30);
+        p.textSize(30); //TODO: parameterize this
         p.fill(255);
         p.noStroke();
         p.push();
@@ -242,6 +266,7 @@ let sketch = function (p) {
         p.scale(-1, 1);
 
         // Because the x-axis is reversed, we need to draw at different x position.
+        //TODO: parameterize this
         p.text(p.nf(fps, 2, 0), -width, height - 10);
         p.pop();
     }
@@ -265,7 +290,7 @@ let sketch = function (p) {
             particles[i].followField(charges);
             particles[i].maxspeed = dotSize * uxSettings.particleMaxSpeedScaler;
             particles[i].updateMotion();
-            particles[i].edges(10);
+            particles[i].edges(0.05 * height);
             particles[i].setColors([uxSettings.nColor, uxSettings.pColor]);
             particles[i].show(canvas);
             particles[i].sinks(charges, indices); //sinks affect the NEXT frame of animation after show

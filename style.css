@@ -21,8 +21,12 @@ limitations under the License. */
   --mdc-theme-on-primary: #f1f3f4;
 } */
 
-html {
-  background-color: black
+html,
+body {
+  background-color: white;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 h1 {
@@ -101,12 +105,14 @@ footer {
 
 canvas {
   z-index: 0;
-  position: absolute;
-  border-radius: 12px;
+  position: relative;
   pointer-events: none;
   transform: rotateY(180deg);
   -webkit-transform: rotateY(180deg);
   -moz-transform: rotateY(180deg);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 /* .output_canvas {

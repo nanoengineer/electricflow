@@ -1,5 +1,3 @@
-
-
 class FieldPoint {
     #privateVector1 = window.p.createVector(0, 0);
 

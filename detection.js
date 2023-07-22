@@ -41,9 +41,9 @@ const hasGetUserMedia = () => { var _a; return !!((_a = navigator.mediaDevices) 
 // If webcam supported, add event listener to button for when user
 // wants to activate it.
 if (hasGetUserMedia()) {
-    enableWebcamButton = document.getElementById("webcamButton");
-    enableWebcamButton.addEventListener("click", enableCam);
-    enableWebcamButton.style.visibility = 'hidden';
+    // enableWebcamButton = document.getElementById("webcamButton");
+    // enableWebcamButton.addEventListener("click", enableCam);
+    // enableWebcamButton.style.visibility = 'hidden';
 }
 else {
     console.warn("getUserMedia() is not supported by your browser");
@@ -57,11 +57,11 @@ function enableCam(event) {
     }
     if (webcamRunning === true) {
         webcamRunning = false;
-        enableWebcamButton.innerText = "ENABLE HANDTRACKING";
+        // enableWebcamButton.innerText = "ENABLE HANDTRACKING";
     }
     else {
         webcamRunning = true;
-        enableWebcamButton.innerText = "DISABLE HANDTRACKING";
+        // enableWebcamButton.innerText = "DISABLE HANDTRACKING";
     }
     // getUsermedia parameters.
     const constraints = {
