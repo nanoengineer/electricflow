@@ -89,11 +89,16 @@ class Particle {
         this.pColor = pc;
     }
 
-    update() {
+    updateMotion() {
         this.vel.add(this.acc.mult(-1)); //deal with flipped canvas
         this.vel.limit(this.maxspeed / window.p.frameRate());
         this.pos.add(this.vel);
         this.acc.set([0, 0]);
+    }
+
+    setColors(clrs) {
+        this.nColor = clrs[0];
+        this.pColor = clrs[1];
     }
 
     follow(fieldPoints, fieldSettings) {

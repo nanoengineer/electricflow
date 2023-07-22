@@ -33,6 +33,14 @@ let sketch = function (p) {
     let cParticles = [];
     let dParticles = [];
 
+    const colorList = [
+        [p.color("#abc8f7"), p.color("#163273")],
+        [p.color("#f5a70c"), p.color("#6d14c7")],
+        [p.color("#eba4e4"), p.color("#300738")],
+        [p.color("#f5c1bf"), p.color("#fa05ea")],
+        [p.color("#07c7e0"), p.color("#016069")]
+    ];
+
     //Interaction settings
     const InteractionSettings = {
         showHand: false,
@@ -40,8 +48,8 @@ let sketch = function (p) {
         palmControlsAmbientCharges: false,
         // nColor: window.p.color("#2e005e"),
         // pColor: window.p.color("#cd8fe3"),
-        nColor: window.p.color("#07c7e0"),
-        pColor: window.p.color("#016069"),
+        nColor: colorList[3][0],
+        pColor: colorList[3][1],
         particleMaxSpeedScaler: 10,
         perlinNoiseTimeStep: 0.2,
         chargeMagnitude: 0.2,
@@ -56,6 +64,10 @@ let sketch = function (p) {
     //For perlin noise
     let t = 0;
 
+    //time scale for color cycling
+    let ct = 0;
+
+
     //Rolling window for smoothing hand coordinates
     const rollingWindowSize = 3;
     let handCoordinatesBuffer = [];
@@ -68,17 +80,6 @@ let sketch = function (p) {
         window.particleGraphics = p.createGraphics(width, height);
         window.handGraphics = p.createGraphics(width, height);
         window.blurGraphics = p.createGraphics(width, height);
-
-
-
-        // //Setting up electric field
-        // const fieldDensity = fieldSettings.pixelsPerStep;
-
-        // for (let i = 0; i < fieldSettings.rows; i++) {
-        //     for (let j = 0; j < fieldSettings.cols; j++) {
-        //         fieldPoints.push(new FieldPoint(j * fieldDensity, i * fieldDensity, p));
-        //     }
-        // }
 
         //Setting up charges
         for (let i = 0; i < uxSettings.numOfAmbientCharges + uxSettings.numOfFingerCharges; i++) {
@@ -124,6 +125,18 @@ let sketch = function (p) {
         handGraphics.clear();
 
         t = t + uxSettings.perlinNoiseTimeStep / (p.frameRate() + 0.001);;
+
+        ct = ct + uxSettings.perlinNoiseTimeStep * 1.5 / (p.frameRate() + 0.001);;
+
+        const l = colorList.length - 1;
+        const id = p.noise(ct) * (l);
+        console.log(id);
+
+        const i = p.floor(id);
+        const d = id - i;
+
+        uxSettings.nColor = p.lerpColor(colorList[i][0], colorList[(i + 1) % l][0], d);
+        uxSettings.pColor = p.lerpColor(colorList[i][1], colorList[(i + 1) % l][1], d);
 
         //Only evolve the ambient charges
         for (let i = 0; i < uxSettings.numOfAmbientCharges; i++) {
@@ -249,8 +262,9 @@ let sketch = function (p) {
         for (var i = 0; i < particles.length; i++) {
             particles[i].followField(charges);
             particles[i].maxspeed = dotSize * uxSettings.particleMaxSpeedScaler;
-            particles[i].update();
+            particles[i].updateMotion();
             particles[i].edges(10);
+            particles[i].setColors([uxSettings.nColor, uxSettings.pColor]);
             particles[i].show(canvas);
             particles[i].sinks(charges, indices); //sinks affect the NEXT frame of animation after show
         }
