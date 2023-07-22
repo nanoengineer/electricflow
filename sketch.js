@@ -1,27 +1,22 @@
-let canvas;
-let width = document.getElementById("video").width * 4;
-let height = document.getElementById("video").height * 4;
 
+import { enableCam } from './detection.js';
 
-
-const handLandmarkConnections = [
-    [0, 1], [1, 2], [2, 3], [3, 4],  // Thumb
-    [5, 6], [6, 7], [7, 8],  // Index finger
-    [9, 10], [10, 11], [11, 12],  // Middle finger
-    [13, 14], [14, 15], [15, 16],  // Ring finger
-    [0, 17], [17, 18], [18, 19], [19, 20]  // Pinky finger
-];
 
 //make p global so other classes can call p5.js functions
 window.p = undefined;
-
-//additional graphics canvasses
-particleGraphics = undefined;
-handGraphics = undefined;
+window.width = document.getElementById("video").width * 8;
+window.height = document.getElementById("video").height * 8;
 
 
 let sketch = function (p) {
     window.p = p;
+
+    //additional graphics canvasses
+    let particleGraphics = undefined;
+    let handGraphics = undefined;
+
+    let width = window.width;
+    let height = window.height;
 
     let leftHandColor = p.color("#4cbcf5");
     let rightHandColor = p.color("#f5823b");
@@ -35,22 +30,22 @@ let sketch = function (p) {
 
     const colorList = [
         [p.color("#abc8f7"), p.color("#163273")],
+        [p.color("#abc8f7"), p.color("#163273")],
         [p.color("#f5a70c"), p.color("#6d14c7")],
         [p.color("#eba4e4"), p.color("#300738")],
         [p.color("#f5c1bf"), p.color("#fa05ea")],
-        [p.color("#07c7e0"), p.color("#016069")]
+        [p.color("#07c7e0"), p.color("#016069")],
+        [p.color("#abc8f7"), p.color("#163273")],
     ];
 
     //Interaction settings
     const InteractionSettings = {
         showHand: false,
         showFrameRate: false,
-        palmControlsAmbientCharges: false,
-        // nColor: window.p.color("#2e005e"),
-        // pColor: window.p.color("#cd8fe3"),
-        nColor: colorList[3][0],
-        pColor: colorList[3][1],
+        nColor: colorList[0][0],
+        pColor: colorList[0][1],
         particleMaxSpeedScaler: 10,
+        perlinTimestepScaler: 1,
         perlinNoiseTimeStep: 0.2,
         chargeMagnitude: 0.2,
         handChargeMultiplier: 3,
@@ -76,10 +71,10 @@ let sketch = function (p) {
     let fingersCompactBuffer = new CircularBuffer(rollingWindowSize);
 
     p.setup = function () {
-        canvas = p.createCanvas(width, height);
-        window.particleGraphics = p.createGraphics(width, height);
-        window.handGraphics = p.createGraphics(width, height);
-        window.blurGraphics = p.createGraphics(width, height);
+        p.createCanvas(width, height);
+        particleGraphics = p.createGraphics(width, height);
+        handGraphics = p.createGraphics(width, height);
+        // window.blurGraphics = p.createGraphics(width, height);
 
         //Setting up charges
         for (let i = 0; i < uxSettings.numOfAmbientCharges + uxSettings.numOfFingerCharges; i++) {
@@ -121,16 +116,16 @@ let sketch = function (p) {
 
     p.draw = function () {
         p.background(0);
-        particleGraphics.background(0, 5 + uxSettings.particleMaxSpeedScaler);
+        particleGraphics.background(0, 5 + 2 * uxSettings.particleMaxSpeedScaler);
         handGraphics.clear();
 
-        t = t + uxSettings.perlinNoiseTimeStep / (p.frameRate() + 0.001);;
+        t = t + uxSettings.perlinNoiseTimeStep * uxSettings.perlinTimestepScaler / (p.frameRate() + 0.001);
 
-        ct = ct + uxSettings.perlinNoiseTimeStep * 1.5 / (p.frameRate() + 0.001);;
+        ct = ct + uxSettings.perlinNoiseTimeStep * uxSettings.perlinTimestepScaler * 0.5 / (p.frameRate() + 0.001);
 
-        const l = colorList.length - 1;
+        const l = colorList.length;
         const id = p.noise(ct) * (l);
-        console.log(id);
+
 
         const i = p.floor(id);
         const d = id - i;
@@ -171,13 +166,14 @@ let sketch = function (p) {
             }
 
             const palmOrient = getPalmOrientation(wlm, hand.categoryName);
-            const fieldColor = p.lerpColor(uxSettings.pColor, uxSettings.nColor, palmOrient);
+            let fieldColor = p.lerpColor(uxSettings.pColor, uxSettings.nColor, palmOrient);
+            fieldColor.setAlpha(100);
 
             //Calculate compactness of finger tips
             fingersCompactBuffer.enqueue(calculateCompactnessEuclidean([wlm[4], wlm[8], wlm[12], wlm[16], wlm[20]]));
             const smoothedCompactness = fingersCompactBuffer.getAverage();
-            console.log(smoothedCompactness);
             uxSettings.particleMaxSpeedScaler = p.map(smoothedCompactness, 0.02, 0.06, 1, 18);
+            uxSettings.perlinTimestepScaler = p.map(smoothedCompactness, 0.02, 0.06, 0.2, 2);
 
             uxSettings.chargeFlip = p.map(palmOrient, 0, 1, -1, 1);
 
@@ -199,11 +195,13 @@ let sketch = function (p) {
         runParticlesEngine(cParticles, charges, 3, particleGraphics);
         runParticlesEngine(dParticles, charges, 2, particleGraphics);
 
+
         p.drawingContext.filter = 'blur(2px)';
         p.image(particleGraphics, 0, 0);
         p.drawingContext.filter = 'blur(50px)';
         p.image(handGraphics, 0, 0);
         p.drawingContext.filter = 'blur(0px)';
+
         if (uxSettings.showFrameRate) {
             showFrameRate();
         }
@@ -212,6 +210,7 @@ let sketch = function (p) {
         // }
     };
 
+    //TODO: when a hand charge is present, max speed of particles should increase
     p.keyPressed = function (key) {
         if (key.key == "h") {
             uxSettings.showHand = !uxSettings.showHand;
@@ -224,6 +223,9 @@ let sketch = function (p) {
         }
         if (key.key == "ArrowDown") {
             uxSettings.handChargeMultiplier -= 1;
+        }
+        if (key.key == "c") {
+            enableCam(null);
         }
         return false;
     };
@@ -283,7 +285,7 @@ let sketch = function (p) {
     //Setting and clear charges attached to hand
 
     function setHandCharges(settings, lm, value) {
-        let palmCentroid = calculateCentroid([lm[0], lm[1], lm[5], lm[17]]);
+        let palmCentroid = calculateCentroid([lm[4], lm[8], lm[12], lm[16], lm[20]]);
         for (let i = settings.numOfAmbientCharges; i < settings.numOfAmbientCharges + settings.numOfFingerCharges; i++) {
             // charges[i].position.set([lm[(i - settings.numOfAmbientCharges + 1) * 4].x * width, lm[(i - settings.numOfAmbientCharges + 1) * 4].y * height]);
             charges[i].position.set(palmCentroid.x * width, palmCentroid.y * height);
@@ -304,7 +306,6 @@ let sketch = function (p) {
         }
     }
 };
-
 
 
 let myp5 = new p5(sketch, document.getElementById('p5canvas'));

@@ -38,7 +38,7 @@ em {
 }
 
 video {
-  z-index: 0;
+  z-index: 1;
   clear: both;
   display: block;
   transform: rotateY(180deg);
@@ -100,7 +100,7 @@ footer {
 }
 
 canvas {
-  z-index: 1;
+  z-index: 0;
   position: absolute;
   border-radius: 12px;
   pointer-events: none;

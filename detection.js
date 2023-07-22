@@ -43,6 +43,7 @@ const hasGetUserMedia = () => { var _a; return !!((_a = navigator.mediaDevices) 
 if (hasGetUserMedia()) {
     enableWebcamButton = document.getElementById("webcamButton");
     enableWebcamButton.addEventListener("click", enableCam);
+    enableWebcamButton.style.visibility = 'hidden';
 }
 else {
     console.warn("getUserMedia() is not supported by your browser");
@@ -73,6 +74,9 @@ function enableCam(event) {
         video.addEventListener("loadeddata", predictWebcam);
     });
 }
+
+export { enableCam };
+
 let lastVideoTime = -1;
 
 async function predictWebcam() {

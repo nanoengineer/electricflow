@@ -1,3 +1,5 @@
+
+
 class FieldPoint {
     #privateVector1 = window.p.createVector(0, 0);
 
@@ -50,6 +52,7 @@ class FieldPoint {
 
 class Charge {
 
+
     constructor(x, y, charge) {
         this.pos = window.p.createVector(x, y);
         this.charge = charge;
@@ -79,7 +82,7 @@ class Particle {
     #privateVector1 = window.p.createVector(0, 0);
 
     constructor(maxspeed, nc, pc) {
-        this.pos = window.p.createVector(p.random(width), p.random(height));
+        this.pos = window.p.createVector(p.random(window.width), p.random(window.height));
         this.vel = window.p.createVector(0, 0);
         this.acc = window.p.createVector(0, 0);
         this.maxspeed = maxspeed; //pixels/second
@@ -91,7 +94,7 @@ class Particle {
 
     updateMotion() {
         this.vel.add(this.acc.mult(-1)); //deal with flipped canvas
-        this.vel.limit(this.maxspeed / window.p.frameRate());
+        this.vel.limit(this.maxspeed * window.p.random(0.8, 1.3) / window.p.frameRate());
         this.pos.add(this.vel);
         this.acc.set([0, 0]);
     }
@@ -106,7 +109,7 @@ class Particle {
         let x = window.p.floor(this.pos.x / step);
         let y = window.p.floor(this.pos.y / step);
         const index = x + y * fieldSettings.cols;
-        if (x <= width && x >= 0 && y <= height && y >= 0) {
+        if (x <= window.width && x >= 0 && y <= window.height && y >= 0) {
             if (index < fieldPoints.length && index >= 0) {
                 let force = fieldPoints[index].vector;
                 this.acc.add(force.add(window.p.random(-0.05, 0.05)));
@@ -154,7 +157,7 @@ class Particle {
     }
 
     #isWithinCanvas() {
-        if (this.pos.x <= width && this.pos.x >= 0 && this.pos.y <= height && this.pos.y >= 0) {
+        if (this.pos.x <= window.width && this.pos.x >= 0 && this.pos.y <= window.height && this.pos.y >= 0) {
             return true;
         } else {
             return false;
@@ -166,23 +169,23 @@ class Particle {
     }
 
     edges(border) {
-        if (this.pos.x > width + border) {
+        if (this.pos.x > window.width + border) {
             this.pos.x = 0 - border;
             this.updatePrev();
 
         }
         if (this.pos.x < 0 - border) {
-            this.pos.x = width + border;
+            this.pos.x = window.width + border;
             this.updatePrev();
 
         }
-        if (this.pos.y > height + border) {
+        if (this.pos.y > window.height + border) {
             this.pos.y = 0 - border;
             this.updatePrev();
 
         }
         if (this.pos.y < 0 - border) {
-            this.pos.y = height + border;
+            this.pos.y = window.height + border;
             this.updatePrev();
         }
     }
