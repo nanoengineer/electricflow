@@ -51,12 +51,13 @@ let sketch = function (p) {
         chargeFlip: 1,
         numOfAmbientCharges: 8,
         numOfFingerCharges: 1,
-        trailCoeff: 6,
+        trailCoeff: 8,
         fingerCompactnessRange: { min: 0.02, max: 0.06 },
         handSmoothingRollingWindowFrameSize: 3,
         particleBlurPx: 3,
         handBlurPx: 30,
-        manipulatedMaxSpeedScalerRange: { min: 0, max: 6 }
+        manipulatedMaxSpeedScalerRange: { min: 0, max: 6 },
+        particlesPerPixel: 0.000375 * p.pixelDensity() * p.displayDensity()
     };
 
     InteractionSettings.manipulatedMaxSpeedScalerRange.max = InteractionSettings.particleMaxSpeedScaler * 1.5;
@@ -89,10 +90,11 @@ let sketch = function (p) {
             charges.push(new Charge(0, 0, 0));
         }
 
-        let N = 1000;
+        let N = uxSettings.particlesPerPixel * width * height / 4;
         let nc = uxSettings.nColor;
         let pc = uxSettings.pColor;
         let scl = uxSettings.particleMaxSpeedScaler;
+
         //Setting up particles
         for (let i = 0; i < N; i++) {
             aParticles[i] = new Particle(6 * scl, nc, pc);
