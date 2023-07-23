@@ -13,7 +13,8 @@ const demosSection = document.getElementById("demos");
 let handLandmarker = undefined;
 let runningMode = "VIDEO";
 let enableWebcamButton;
-let webcamRunning = false;
+
+window.webcamRunning = false;
 
 window.handDetectionResults = undefined;
 // Before we can use HandLandmarker class we must wait for it to finish
@@ -53,27 +54,32 @@ else {
 function enableCam(event) {
     if (!handLandmarker) {
         console.log("Wait! objectDetector not loaded yet.");
-        return;
+        //return;
     }
-    if (webcamRunning === true) {
-        webcamRunning = false;
-        // enableWebcamButton.innerText = "ENABLE HANDTRACKING";
+    if (window.webcamRunning === true) {
+        window.webcamRunning = false;
+        video.pause();
+        video.src = "";
+        video.style.display = 'none';
+        video.srcObject.getTracks()[0].stop();
+        console.log("Vid off");
     }
     else {
-        webcamRunning = true;
-        // enableWebcamButton.innerText = "DISABLE HANDTRACKING";
+        // getUsermedia parameters.
+        const constraints = {
+            video: true
+        };
+        // Activate the webcam stream.
+        navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+            video.srcObject = stream;
+            video.addEventListener("loadeddata", predictWebcam);
+        });
+        video.style.display = 'initial';
+        window.webcamRunning = true;
     }
-    // getUsermedia parameters.
-    const constraints = {
-        video: true
-    };
-    // Activate the webcam stream.
-    navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
-        video.srcObject = stream;
-        // video.style.display = 'none';
-        video.addEventListener("loadeddata", predictWebcam);
-    });
+
 }
+
 
 export { enableCam };
 
@@ -92,7 +98,7 @@ async function predictWebcam() {
         window.handDetectionResults = handLandmarker.detectForVideo(video, startTimeMs);
     }
     // Call this function again to keep predicting when the browser is ready.
-    if (webcamRunning === true) {
+    if (window.webcamRunning === true) {
         window.requestAnimationFrame(predictWebcam);
     }
 }

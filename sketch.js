@@ -81,7 +81,7 @@ let sketch = function (p) {
             charges.push(new Charge(0, 0, 0));
         }
 
-        let N = 1000;
+        let N = 1200;
         let nc = uxSettings.nColor;
         let pc = uxSettings.pColor;
         let scl = uxSettings.particleMaxSpeedScaler;
@@ -257,7 +257,7 @@ let sketch = function (p) {
     //Show framerate
     function showFrameRate() {
         let fps = p.frameRate();
-        p.textSize(30); //TODO: parameterize this
+        p.textSize(25); //TODO: parameterize this
         p.fill(255);
         p.noStroke();
         p.push();
@@ -329,6 +329,13 @@ let sketch = function (p) {
             const c = charges[i].charge;
             charges[i].charge = p.map(orientation, 0, 1, -1.5 * c, 1.5 * c);
         }
+    }
+    function setVideoPositionAndSize(x, y, w, h) {
+        const videoElement = document.getElementById('video');
+        videoElement.style.left = `${x}px`;
+        videoElement.style.top = `${y}px`;
+        videoElement.width = `${w}`;
+        videoElement.height = `${h}`;
     }
 };
 

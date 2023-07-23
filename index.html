@@ -42,7 +42,7 @@ limitations under the License. -->
         <span class="mdc-button__label">ENABLE WEBCAM</span>
       </button> -->
       <div style="position: absolute">
-        <video id="video" width="120" height="90" style="position: absolute; left: 0px; top: 0px;" autoplay
+        <video id="video" width="120" height="90" style="position: fixed; left: 5px; top: 5px;" autoplay
           playsinline></video>
       </div>
     </div>
@@ -53,10 +53,6 @@ limitations under the License. -->
     </section>
     <!-- partial -->
     <!-- position the video to the right corner the sketch -->
-    <script>
-      const videoElement = document.getElementById('video')
-      videoElement.style.left = `${videoElement.width * 7}px`;
-    </script>
     <script type="module" src="./detection.js"></script>
     <script src="./helpers.js"></script>
     <script src=" ./fields.js"></script>
