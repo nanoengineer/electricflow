@@ -79,15 +79,16 @@ class Charge {
 class Particle {
     #privateVector1 = window.p.createVector(0, 0);
 
-    constructor(maxspeed, nc, pc) {
-        this.pos = window.p.createVector(p.random(window.width), p.random(window.height));
+    constructor(sinkPos) {
+        this.pos = window.p.createVector(sinkPos.x, sinkPos.y);
         this.vel = window.p.createVector(0, 0);
         this.acc = window.p.createVector(0, 0);
-        this.maxspeed = maxspeed; //pixels/second
+        this.maxspeed; //pixels/second
         this.prevPos = this.pos.copy();
         this.potential = 0;
-        this.nColor = nc;
-        this.pColor = pc;
+        this.nColor;
+        this.pColor;
+        this.fixedSink = window.p.createVector(sinkPos.x, sinkPos.y);
     }
 
     updateMotion() {
@@ -142,7 +143,8 @@ class Particle {
     }
 
     show(canvas) {
-        canvas.stroke(window.p.lerpColor(this.nColor, this.pColor, window.p.map(this.potential, -1000, 1000, 1, 0)));
+        canvas.stroke(window.p.lerpColor(this.nColor, this.pColor, window.p.map(this.potential, -100, 100, 1, 0)));
+        // canvas.stroke(255);
         canvas.line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
         this.updatePrev();
     }
@@ -167,23 +169,29 @@ class Particle {
     }
 
     edges(border) {
-        if (this.pos.x > window.width + border) {
-            this.pos.x = 0 - border;
-            this.updatePrev();
+        // if (this.pos.x > window.width + border) {
+        //     this.pos.x = 0 - border;
+        //     this.updatePrev();
 
-        }
-        if (this.pos.x < 0 - border) {
-            this.pos.x = window.width + border;
-            this.updatePrev();
+        // }
+        // if (this.pos.x < 0 - border) {
+        //     this.pos.x = window.width + border;
+        //     this.updatePrev();
 
-        }
-        if (this.pos.y > window.height + border) {
-            this.pos.y = 0 - border;
-            this.updatePrev();
+        // }
+        // if (this.pos.y > window.height + border) {
+        //     this.pos.y = 0 - border;
+        //     this.updatePrev();
 
-        }
-        if (this.pos.y < 0 - border) {
-            this.pos.y = window.height + border;
+        // }
+        // if (this.pos.y < 0 - border) {
+        //     this.pos.y = window.height + border;
+        //     this.updatePrev();
+        // }
+
+        if (this.pos.x > window.width + border || this.pos.x < 0 - border || this.pos.y > window.height + border || this.pos.y < 0 - border) {
+            this.pos.x = this.fixedSink.x;
+            this.pos.y = this.fixedSink.y;
             this.updatePrev();
         }
     }

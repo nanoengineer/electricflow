@@ -13,9 +13,9 @@ let sketch = function (p) {
     window.p = p;
 
     //additional graphics canvasses
-    let particleGraphics = undefined;
-    let handGraphics = undefined;
-    let welcomeGraphics = undefined;
+    let particleGraphics;
+    let handGraphics;
+    let welcomeGraphics;
 
     let leftHandColor = p.color("#4cbcf5");
     let rightHandColor = p.color("#f5823b");
@@ -53,16 +53,18 @@ let sketch = function (p) {
         numOfFingerCharges: 1,
         trailCoeff: 8,
         fingerCompactnessRange: { min: 0.02, max: 0.06 },
-        handSmoothingRollingWindowFrameSize: 3,
+        handSmoothingRollingWindowFrameSize: 8,
         particleBlurPx: 3,
         handBlurPx: 30,
         manipulatedMaxSpeedScalerRange: { min: 0, max: 6 },
-        particlesPerPixel: 0.000375 * p.pixelDensity() * p.displayDensity()
+        particlesPerPixel: 0.000375 * p.pixelDensity() * p.displayDensity(),
+        averageFrameRateWindow: 50,
+        desiredFrameRate: 40,
+        desiredFrameRateDelta: 3,
+        fixedParticleSink: { x: -500, y: 500 }
     };
 
-    InteractionSettings.manipulatedMaxSpeedScalerRange.max = InteractionSettings.particleMaxSpeedScaler * 1.5;
-
-
+    InteractionSettings.manipulatedMaxSpeedScalerRange.max = InteractionSettings.particleMaxSpeedScaler * 2;
 
     //Interaction settings
     let uxSettings = Object.create(InteractionSettings);
@@ -78,6 +80,13 @@ let sketch = function (p) {
     let smoothedHandLandmarks = [];
 
     let fingersCompactnessBuffer = new CircularBuffer(uxSettings.handSmoothingRollingWindowFrameSize);
+    let averageFrameRateBuffer = new CircularBuffer(uxSettings.averageFrameRateWindow)
+    let palmOrientBuffer = new CircularBuffer(uxSettings.handSmoothingRollingWindowFrameSize);;
+
+    let music;
+    p.preload = function () {
+        music = p.loadSound('./media_assets/LordOfTheDawn-JesseGallagher.mp3', songLoaded);
+    }
 
     p.setup = function () {
         p.createCanvas(width, height);
@@ -90,25 +99,22 @@ let sketch = function (p) {
             charges.push(new Charge(0, 0, 0));
         }
 
-        let N = uxSettings.particlesPerPixel * width * height / 4;
+        //Offscreen sink where all new particles are initialized
+        charges.push(new Charge(uxSettings.fixedParticleSink.x, uxSettings.fixedParticleSink.y, -0.0001));
+
+        // let N = uxSettings.particlesPerPixel * width * height / 4;
+        let N = 1;
         let nc = uxSettings.nColor;
         let pc = uxSettings.pColor;
         let scl = uxSettings.particleMaxSpeedScaler;
+        let spot = uxSettings.fixedParticleSink;
 
         //Setting up particles
         for (let i = 0; i < N; i++) {
-            aParticles[i] = new Particle(6 * scl, nc, pc);
-        }
-        for (let i = 0; i < N; i++) {
-            bParticles[i] = new Particle(5 * scl, nc, pc);
-        }
-
-        for (let i = 0; i < N; i++) {
-            cParticles[i] = new Particle(4 * scl, nc, pc);
-        }
-
-        for (let i = 0; i < N; i++) {
-            dParticles[i] = new Particle(3 * scl, nc, pc);
+            aParticles.push(new Particle(spot));
+            bParticles.push(new Particle(spot));
+            cParticles.push(new Particle(spot));
+            dParticles.push(new Particle(spot));
         }
 
         //setting up hand coordinate rolling window
@@ -116,7 +122,7 @@ let sketch = function (p) {
             handCoordinatesBuffer.push(new CoordinatesCircularBuffer(uxSettings.handSmoothingRollingWindowFrameSize));
             smoothedHandLandmarks.push(p.createVector(0, 0));
         }
-        // makeWelcomePage();
+
         p.background(0);
     };
 
@@ -125,6 +131,9 @@ let sketch = function (p) {
 
         particleGraphics.background(0, uxSettings.trailCoeff);
         handGraphics.clear();
+
+        averageFrameRateBuffer.enqueue(p.frameRate());
+        const avgFr = averageFrameRateBuffer.getAverage();
 
         t = t + uxSettings.perlinNoiseTimeStep * uxSettings.perlinTimestepScaler / (p.frameRate() + 0.001);
 
@@ -153,6 +162,9 @@ let sketch = function (p) {
             charges[i].charge = p.noise(t + 20 * i) * (uxSettings.chargeMagnitude) * (polarity * uxSettings.chargeFlip)
         }
 
+        //generate keep adding particles until the specified framerate
+
+
         // setTestCharge(-0.5);
 
         //Hand detection from MediaPipe
@@ -173,7 +185,9 @@ let sketch = function (p) {
             }
 
             const palmOrient = getPalmOrientation(wlm, hand.categoryName);
-            let fieldColor = p.lerpColor(uxSettings.nColor, uxSettings.pColor, palmOrient);
+            palmOrientBuffer.enqueue(palmOrient);
+
+            let fieldColor = p.lerpColor(uxSettings.nColor, uxSettings.pColor, palmOrientBuffer.getAverage());
             fieldColor.setAlpha(100);
 
             //Calculate compactness of finger tips
@@ -193,6 +207,10 @@ let sketch = function (p) {
         }
         else {
             clearHandCharges(uxSettings, charges);
+            generateParticlesUntilFramerate(aParticles, avgFr);
+            generateParticlesUntilFramerate(bParticles, avgFr);
+            generateParticlesUntilFramerate(cParticles, avgFr);
+            generateParticlesUntilFramerate(dParticles, avgFr);
         }
 
         runParticlesEngine(aParticles, charges, 10, particleGraphics);
@@ -209,7 +227,7 @@ let sketch = function (p) {
 
 
         if (uxSettings.showFrameRate) {
-            showFrameRate();
+            showFrameRate(avgFr);
         }
     };
 
@@ -235,10 +253,22 @@ let sketch = function (p) {
             }
         }
 
-        if (key.key == "c") {
-            enableCam(null);
+        if (key.key == "h") {
+            uxSettings.showHand = !uxSettings.showHand;
+            if (!uxSettings.showHand) {
+                document.getElementById("video").style.display = 'none';
+            }
+            else {
+                document.getElementById("video").style.display = 'initial';
+            }
         }
-        if (key.key == "f") {
+
+        if (key.key == " ") {
+            if (music != undefined) {
+                music.setVolume(0.5);
+                music.play();
+
+            }
             let fs = p.fullscreen();
             if (!fs) {
                 updateSketchSize(p.displayWidth, p.displayHeight);
@@ -247,12 +277,25 @@ let sketch = function (p) {
             }
             p.fullscreen(!fs);
         }
+
+        if (key.key == "c") {
+            enableCam(null);
+        }
+        if (key.key == "f") {
+
+        }
         return false;
     };
 
     p.windowResized = function () {
         // Resize the canvas to match the new window dimensions
         updateSketchSize(p.windowWidth, p.windowHeight);
+    }
+
+    function songLoaded(song) {
+        music = song;
+        music.loop();
+        music.setVolume(0);
     }
 
     function updateSketchSize(w, h) {
@@ -285,9 +328,10 @@ let sketch = function (p) {
 
 
     //Show framerate
-    function showFrameRate() {
-        let fps = p.frameRate();
-        p.textSize(25); //TODO: parameterize this
+    function showFrameRate(avgFr) {
+        let fps = avgFr;
+
+        p.textSize(0.05 * height); //TODO: parameterize this
         p.fill(255);
         p.noStroke();
         p.push();
@@ -297,9 +341,9 @@ let sketch = function (p) {
 
         // Because the x-axis is reversed, we need to draw at different x position.
         //TODO: parameterize this
-        p.text(p.nf(fps, 2, 0), -width, height - 10);
-        p.text(`Trail Coeff: ${uxSettings.trailCoeff}`, -width, height - 30);
-        p.text(`Max Speed Scaler: ${uxSettings.particleMaxSpeedScaler}`, -width, height - 50);
+        p.text(p.nf(fps, 2, 0), -width, 0.85 * height);
+        p.text(`Trail Coeff: ${uxSettings.trailCoeff}`, -width, 0.8 * height);
+        p.text(`Max Speed Scaler: ${uxSettings.particleMaxSpeedScaler}`, -width, 0.75 * height);
         p.pop();
     }
 
@@ -324,6 +368,22 @@ let sketch = function (p) {
         uxSettings.particleMaxSpeedScaler = p.map(compact, cmin, cmax, smin, smax);
         uxSettings.perlinTimestepScaler = p.map(compact, cmin, cmax, 0.2, 2);
         uxSettings.chargeFlip = p.map(palmOrient, 0, 1, -1, 1);
+
+        if (music != undefined) {
+            let a = p.map(compact, cmin, cmax, 0.1, 1.0);
+            a = p.constrain(a, 0.1, 1.0);
+            music.setVolume(a);
+        }
+    }
+
+    function generateParticlesUntilFramerate(particlesList, currentFr) {
+        const th = uxSettings.desiredFrameRateDelta;
+        if (currentFr > uxSettings.desiredFrameRate + th) {
+            particlesList.push(new Particle(uxSettings.fixedParticleSink));
+        }
+        else if (currentFr < uxSettings.desiredFrameRate - th) {
+            particlesList.pop();
+        }
     }
 
     //Running the particle engine and show it
@@ -337,6 +397,7 @@ let sketch = function (p) {
             particles[i].edges(0.05 * height);
             particles[i].setColors([uxSettings.nColor, uxSettings.pColor]);
             particles[i].show(canvas);
+            // particles[i].showWhite(canvas);
             particles[i].sinks(charges, indices); //sinks affect the NEXT frame of animation after show
         }
     }
