@@ -92,7 +92,7 @@ class Particle {
 
     updateMotion() {
         this.vel.add(this.acc.mult(-1)); //deal with flipped canvas
-        this.vel.limit(this.maxspeed * window.p.random(0.8, 1.3) / window.p.frameRate());
+        this.vel.limit(this.maxspeed * window.p.random(0.9, 1.1) / window.p.frameRate());
         this.pos.add(this.vel);
         this.acc.set([0, 0]);
     }
@@ -110,7 +110,7 @@ class Particle {
         if (x <= window.width && x >= 0 && y <= window.height && y >= 0) {
             if (index < fieldPoints.length && index >= 0) {
                 let force = fieldPoints[index].vector;
-                this.acc.add(force.add(window.p.random(-0.05, 0.05)));
+                this.acc.add(force.add(window.p.random(-0.02, 0.02)));
                 this.potential = fieldPoints[index].potential;
             }
         } else {
@@ -142,7 +142,7 @@ class Particle {
     }
 
     show(canvas) {
-        canvas.stroke(window.p.lerpColor(this.nColor, this.pColor, window.p.map(this.potential, -400, 400, 0, 1)));
+        canvas.stroke(window.p.lerpColor(this.nColor, this.pColor, window.p.map(this.potential, -1000, 1000, 1, 0)));
         canvas.line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
         this.updatePrev();
     }
@@ -189,15 +189,15 @@ class Particle {
     }
 
     sinks(charges, sourcesIndices) {
-        //if particle is within 1 px of a sink
+        //if particle is within rsink px of a sink, emit it at a source with rsource px
+        const rsource = 10;
+        const rsink = 10;
         if (sourcesIndices.length != 0) {
             const source = charges[window.p.random(sourcesIndices)];
             for (const ch of charges) {
-                if (ch.chargeMag < 0 && window.p.abs(this.pos.x - ch.pos.x) <= 4 && window.p.abs(this.pos.y - ch.pos.y) <= 4) {
-                    this.pos.x = source.pos.x + window.p.random(-2, 2);
-                    this.pos.y = source.pos.y + window.p.random(-2, 2);
-                    // this.acc.set([0, 0]);
-                    // this.vel.set([0, 0]);
+                if (ch.chargeMag < 0 && window.p.dist(this.pos.x, this.pos.y, ch.pos.x, ch.pos.y) < rsink) {
+                    this.pos.x = source.pos.x + window.p.random(-rsource, rsource);
+                    this.pos.y = source.pos.y + window.p.random(-rsource, rsource);
                     this.updatePrev();
                     break;
                 }

@@ -4,8 +4,6 @@ import { enableCam } from './detection.js';
 
 //make p global so other classes can call p5.js functions
 window.p = undefined;
-// window.width = document.getElementById("video").width * 8;
-// window.height = document.getElementById("video").height * 8;
 
 window.width = window.innerWidth;
 window.height = window.innerHeight;
@@ -17,6 +15,7 @@ let sketch = function (p) {
     //additional graphics canvasses
     let particleGraphics = undefined;
     let handGraphics = undefined;
+    let welcomeGraphics = undefined;
 
     let leftHandColor = p.color("#4cbcf5");
     let rightHandColor = p.color("#f5823b");
@@ -29,59 +28,68 @@ let sketch = function (p) {
     let dParticles = [];
 
     const colorList = [
-        [p.color("#abc8f7"), p.color("#163273")],
-        [p.color("#abc8f7"), p.color("#163273")],
-        [p.color("#f5a70c"), p.color("#6d14c7")],
-        [p.color("#eba4e4"), p.color("#300738")],
-        [p.color("#f5c1bf"), p.color("#fa05ea")],
-        [p.color("#07c7e0"), p.color("#016069")],
-        [p.color("#abc8f7"), p.color("#163273")],
+        [window.p.color("#abc8f7"), window.p.color("#163273")],
+        [window.p.color("#abc8f7"), window.p.color("#163273")],
+        [window.p.color("#f5a70c"), window.p.color("#6d14c7")],
+        [window.p.color("#eba4e4"), window.p.color("#300738")],
+        [window.p.color("#f5c1bf"), window.p.color("#fa05ea")],
+        [window.p.color("#07c7e0"), window.p.color("#016069")],
+        [window.p.color("#abc8f7"), window.p.color("#163273")],
+        [window.p.color("#abc8f7"), window.p.color("#163273")],
     ];
 
-    //Interaction settings
     const InteractionSettings = {
         showHand: false,
         showFrameRate: false,
         nColor: colorList[0][0],
-        pColor: colorList[0][1],
-        particleMaxSpeedScaler: 10,
+        pcolor: colorList[0][1],
+        particleMaxSpeedScaler: 6,
         perlinTimestepScaler: 1,
-        perlinNoiseTimeStep: 0.2,
+        perlinNoiseTimeStep: 0.1,
         chargeMagnitude: 0.2,
-        handChargeMultiplier: 3,
+        handChargeMultiplier: 2,
         chargeFlip: 1,
         numOfAmbientCharges: 8,
-        numOfFingerCharges: 1
+        numOfFingerCharges: 1,
+        trailCoeff: 6,
+        fingerCompactnessRange: { min: 0.02, max: 0.06 },
+        handSmoothingRollingWindowFrameSize: 3,
+        particleBlurPx: 3,
+        handBlurPx: 30,
+        manipulatedMaxSpeedScalerRange: { min: 0, max: 6 }
     };
 
+    InteractionSettings.manipulatedMaxSpeedScalerRange.max = InteractionSettings.particleMaxSpeedScaler * 1.5;
+
+
+
+    //Interaction settings
     let uxSettings = Object.create(InteractionSettings);
 
     //For perlin noise
     let t = 0;
-
     //time scale for color cycling
     let ct = 0;
 
 
     //Rolling window for smoothing hand coordinates
-    const rollingWindowSize = 3;
     let handCoordinatesBuffer = [];
     let smoothedHandLandmarks = [];
 
-    let fingersCompactBuffer = new CircularBuffer(rollingWindowSize);
+    let fingersCompactnessBuffer = new CircularBuffer(uxSettings.handSmoothingRollingWindowFrameSize);
 
     p.setup = function () {
         p.createCanvas(width, height);
         particleGraphics = p.createGraphics(width, height);
         handGraphics = p.createGraphics(width, height);
-        // window.blurGraphics = p.createGraphics(width, height);
+        welcomeGraphics = p.createGraphics(width, height);
 
         //Setting up charges
         for (let i = 0; i < uxSettings.numOfAmbientCharges + uxSettings.numOfFingerCharges; i++) {
             charges.push(new Charge(0, 0, 0));
         }
 
-        let N = 1200;
+        let N = 1000;
         let nc = uxSettings.nColor;
         let pc = uxSettings.pColor;
         let scl = uxSettings.particleMaxSpeedScaler;
@@ -103,20 +111,17 @@ let sketch = function (p) {
 
         //setting up hand coordinate rolling window
         for (let i = 0; i < 21; i++) {
-            handCoordinatesBuffer.push(new CoordinatesCircularBuffer(rollingWindowSize));
+            handCoordinatesBuffer.push(new CoordinatesCircularBuffer(uxSettings.handSmoothingRollingWindowFrameSize));
             smoothedHandLandmarks.push(p.createVector(0, 0));
         }
-
+        // makeWelcomePage();
         p.background(0);
-        particleGraphics.background(0);
-        handGraphics.background(0);
-        p.image(particleGraphics, 0, 0);
-        p.image(handGraphics, 0, 0);
     };
 
     p.draw = function () {
         p.background(0);
-        particleGraphics.background(0, 5 + 2 * uxSettings.particleMaxSpeedScaler);
+
+        particleGraphics.background(0, uxSettings.trailCoeff);
         handGraphics.clear();
 
         t = t + uxSettings.perlinNoiseTimeStep * uxSettings.perlinTimestepScaler / (p.frameRate() + 0.001);
@@ -166,16 +171,15 @@ let sketch = function (p) {
             }
 
             const palmOrient = getPalmOrientation(wlm, hand.categoryName);
-            let fieldColor = p.lerpColor(uxSettings.pColor, uxSettings.nColor, palmOrient);
+            let fieldColor = p.lerpColor(uxSettings.nColor, uxSettings.pColor, palmOrient);
             fieldColor.setAlpha(100);
 
             //Calculate compactness of finger tips
-            fingersCompactBuffer.enqueue(calculateCompactnessEuclidean([wlm[4], wlm[8], wlm[12], wlm[16], wlm[20]]));
-            const smoothedCompactness = fingersCompactBuffer.getAverage();
-            uxSettings.particleMaxSpeedScaler = p.map(smoothedCompactness, 0.02, 0.06, 1, 18);
-            uxSettings.perlinTimestepScaler = p.map(smoothedCompactness, 0.02, 0.06, 0.2, 2);
+            fingersCompactnessBuffer.enqueue(calculateCompactnessEuclidean([wlm[4], wlm[8], wlm[12], wlm[16], wlm[20]]));
+            const smoothedCompactness = fingersCompactnessBuffer.getAverage();
 
-            uxSettings.chargeFlip = p.map(palmOrient, 0, 1, -1, 1);
+            updateManipulation(smoothedCompactness, palmOrient);
+
 
             if (uxSettings.showHand) {
                 drawHandConnections(smoothedHandLandmarks, handGraphics, fieldColor);
@@ -189,41 +193,46 @@ let sketch = function (p) {
             clearHandCharges(uxSettings, charges);
         }
 
+        runParticlesEngine(aParticles, charges, 10, particleGraphics);
+        runParticlesEngine(bParticles, charges, 8, particleGraphics);
+        runParticlesEngine(cParticles, charges, 6, particleGraphics);
+        runParticlesEngine(dParticles, charges, 4, particleGraphics);
 
-        runParticlesEngine(aParticles, charges, 5, particleGraphics);
-        runParticlesEngine(bParticles, charges, 4, particleGraphics);
-        runParticlesEngine(cParticles, charges, 3, particleGraphics);
-        runParticlesEngine(dParticles, charges, 2, particleGraphics);
-
-
-        p.drawingContext.filter = 'blur(2px)';
+        p.drawingContext.filter = `blur(${uxSettings.particleBlurPx}px)`;
         p.image(particleGraphics, 0, 0);
-        p.drawingContext.filter = 'blur(50px)';
+        p.drawingContext.filter = `blur(${uxSettings.handBlurPx}px)`;
         p.image(handGraphics, 0, 0);
         p.drawingContext.filter = 'blur(0px)';
+        p.image(welcomeGraphics, 0, 0);
+
 
         if (uxSettings.showFrameRate) {
             showFrameRate();
         }
-        // for (fp of fieldPoints) {
-        //     fp.draw();
-        // }
     };
 
     //TODO: when a hand charge is present, max speed of particles should increase
     p.keyPressed = function (key) {
-        if (key.key == "h") {
-            uxSettings.showHand = !uxSettings.showHand;
+
+        //Debug 
+        if (window.location.href === 'http://127.0.0.1:8080/') {
+            if (key.key == "r") {
+                uxSettings.showFrameRate = !uxSettings.showFrameRate;
+            }
+            if (key.key == "ArrowUp") {
+                uxSettings.trailCoeff += 1;
+            }
+            if (key.key == "ArrowDown") {
+                uxSettings.trailCoeff -= 1;
+            }
+            if (key.key == "ArrowLeft") {
+                uxSettings.particleMaxSpeedScaler -= 1;
+            }
+            if (key.key == "ArrowRight") {
+                uxSettings.particleMaxSpeedScaler += 1;
+            }
         }
-        if (key.key == "r") {
-            uxSettings.showFrameRate = !uxSettings.showFrameRate;
-        }
-        if (key.key == "ArrowUp") {
-            uxSettings.handChargeMultiplier += 1;
-        }
-        if (key.key == "ArrowDown") {
-            uxSettings.handChargeMultiplier -= 1;
-        }
+
         if (key.key == "c") {
             enableCam(null);
         }
@@ -252,7 +261,26 @@ let sketch = function (p) {
         height = h;
         particleGraphics = p.createGraphics(w, h);
         handGraphics = p.createGraphics(w, h);
+        welcomeGraphics = p.createGraphics(w, h);
     }
+
+    function makeWelcomePage() {
+
+        welcomeGraphics.fill(0, 240);
+        welcomeGraphics.rect(0, 0, width, height);
+        welcomeGraphics.textSize(100); //TODO: parameterize this
+        welcomeGraphics.textAlign(p.CENTER, p.CENTER);
+
+        // Scale -1, 1 means reverse the x axis, keep y the same.
+        welcomeGraphics.translate(width, 0);
+        welcomeGraphics.scale(-1, 1);
+        welcomeGraphics.erase(255, 200);
+        welcomeGraphics.text("Welcome to Bloom.Electric", width / 2, height / 2);
+        welcomeGraphics.noErase();
+        welcomeGraphics.fill(255, 70);
+        welcomeGraphics.text("Welcome to Bloom.Electric", width / 2, height / 2);
+    }
+
 
     //Show framerate
     function showFrameRate() {
@@ -268,6 +296,8 @@ let sketch = function (p) {
         // Because the x-axis is reversed, we need to draw at different x position.
         //TODO: parameterize this
         p.text(p.nf(fps, 2, 0), -width, height - 10);
+        p.text(`Trail Coeff: ${uxSettings.trailCoeff}`, -width, height - 30);
+        p.text(`Max Speed Scaler: ${uxSettings.particleMaxSpeedScaler}`, -width, height - 50);
         p.pop();
     }
 
@@ -280,6 +310,18 @@ let sketch = function (p) {
             charges[i].position = p.createVector(x, y);
             charges[i].charge = c;
         }
+    }
+
+    function updateManipulation(compact, palmOrient) {
+        const cmin = uxSettings.fingerCompactnessRange.min;
+        const cmax = uxSettings.fingerCompactnessRange.max;
+
+        let smin = uxSettings.manipulatedMaxSpeedScalerRange.min;
+        let smax = uxSettings.manipulatedMaxSpeedScalerRange.max;
+
+        uxSettings.particleMaxSpeedScaler = p.map(compact, cmin, cmax, smin, smax);
+        uxSettings.perlinTimestepScaler = p.map(compact, cmin, cmax, 0.2, 2);
+        uxSettings.chargeFlip = p.map(palmOrient, 0, 1, -1, 1);
     }
 
     //Running the particle engine and show it

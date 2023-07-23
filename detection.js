@@ -8,6 +8,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 import { HandLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
 const demosSection = document.getElementById("demos");
 let handLandmarker = undefined;
@@ -34,7 +35,7 @@ const createHandLandmarker = async () => {
 createHandLandmarker();
 
 /********************************************************************
-// Demo 2: Continuously grab image from webcam stream and detect it.
+Continuously grab image from webcam stream and detect it.
 ********************************************************************/
 const video = document.getElementById("video");
 // Check if webcam access is supported.
@@ -79,7 +80,6 @@ function enableCam(event) {
     }
 
 }
-
 
 export { enableCam };
 
