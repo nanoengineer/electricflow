@@ -40,6 +40,8 @@ let sketch = function (p) {
 
     const InteractionSettings = {
         showHand: false,
+        showInfo: false,
+        showCamera: false,
         showFrameRate: false,
         nColor: colorList[0][0],
         pcolor: colorList[0][1],
@@ -84,9 +86,11 @@ let sketch = function (p) {
     let averageFrameRateBuffer = new CircularBuffer(uxSettings.averageFrameRateWindow)
     let palmOrientBuffer = new CircularBuffer(uxSettings.handSmoothingRollingWindowFrameSize);;
 
-    let music;
+    let musicHigh;
+    let musicLow;
     p.preload = function () {
-        music = p.loadSound('./media_assets/LordOfTheDawn-JesseGallagher.mp3', songLoaded);
+        musicHigh = p.loadSound('./media_assets/LordOfTheDawn-JesseGallagher.mp3', highSongLoaded);
+        musicLow = p.loadSound('./media_assets/LordOfTheDawn-JesseGallagher.mp3', lowSongLoaded);
     }
 
     p.setup = function () {
@@ -255,32 +259,39 @@ let sketch = function (p) {
         }
 
         if (key.key == "o") {
+            //Toggle all overlay
             uxSettings.showHand = !uxSettings.showHand;
-
-            if (window.webcamRunning === true) {
-                if (!uxSettings.showHand) {
-                    document.getElementById("video").style.display = 'none';
-
-                }
-                else {
-                    document.getElementById("video").style.display = 'initial';
-                }
-            }
-
-            if (!uxSettings.showHand) {
-                document.getElementById("overlayDiv").style.display = 'none';
-
-            }
-            else {
-                document.getElementById("overlayDiv").style.display = 'flex';
-            }
+            uxSettings.showCamera = !uxSettings.showCamera;
+            uxSettings.showInfo = !uxSettings.showInfo;
+            showCamera(uxSettings.showCamera);
+            showInfo(uxSettings.showInfo);
         }
 
-        if (key.key == " ") {
-            if (music != undefined) {
-                music.setVolume(0.4);
-                music.play();
+        if (key.key == "1") {
+            //Handmirror Toggle
+            uxSettings.showHand = !uxSettings.showHand;
+        }
 
+        if (key.key == "2") {
+            //Camera viz toggle
+            uxSettings.showCamera = !uxSettings.showCamera;
+            showCamera(uxSettings.showCamera);
+        }
+
+        if (key.key == "3") {
+            //info panel toggle
+            uxSettings.showInfo = !uxSettings.showInfo;
+            showInfo(uxSettings.showInfo);
+        }
+
+
+        if (key.key == " ") {
+            if (musicHigh != undefined && musicLow != undefined) {
+                musicHigh.setVolume(0.2);
+                musicLow.setVolume(1);
+                musicLow.rate(0.5);
+                musicHigh.play();
+                musicLow.play();
             }
             let fs = p.fullscreen();
             if (!fs) {
@@ -305,9 +316,15 @@ let sketch = function (p) {
         updateSketchSize(p.windowWidth, p.windowHeight);
     }
 
-    function songLoaded(song) {
-        music = song;
-        music.loop();
+    function highSongLoaded(song) {
+        musicHigh = song;
+        musicLow.setVolume(0.2);
+        musicHigh.loop();
+    }
+    function lowSongLoaded(song) {
+        musicLow = song;
+        musicLow.setVolume(1.0);
+        musicLow.loop();
     }
 
     function updateSketchSize(w, h) {
@@ -336,6 +353,28 @@ let sketch = function (p) {
         welcomeGraphics.noErase();
         welcomeGraphics.fill(255, 70);
         welcomeGraphics.text("Welcome to Bloom.Electric", width / 2, height / 2);
+    }
+
+    function showCamera(flag) {
+        if (window.webcamRunning === true) {
+            if (flag) {
+                document.getElementById("video").style.display = 'initial';
+
+            }
+            else {
+                document.getElementById("video").style.display = 'none';
+            }
+        }
+    }
+
+    function showInfo(flag) {
+        if (flag) {
+            document.getElementById("overlayDiv").style.display = 'flex';
+
+        }
+        else {
+            document.getElementById("overlayDiv").style.display = 'none';
+        }
     }
 
 
@@ -381,10 +420,12 @@ let sketch = function (p) {
         uxSettings.perlinTimestepScaler = p.map(compact, cmin, cmax, 0.2, 2);
         uxSettings.chargeFlip = p.map(palmOrient, 0, 1, -1, 1);
 
-        if (music != undefined) {
-            let a = p.map(compact, cmin, cmax, 0.1, 1.0);
-            a = p.constrain(a, 0.1, 1.0);
-            music.setVolume(a);
+        if (musicHigh != undefined) {
+            let a = p.map(compact, cmin, cmax, 0.0, 0.5);
+            const v = p.constrain(a, 0.05, 0.5);
+            const s = p.constrain(a, 0.1, 0.5);
+            musicHigh.setVolume(v);
+            musicLow.rate(s);
         }
     }
 
