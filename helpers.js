@@ -18,9 +18,7 @@ function getPalmOrientation(worldLandmarks, handedness) {
 
     //Flip the direction of the palm landmarks
     if (handedness == "Left") {
-        let temp = p1;
-        p1 = p3;
-        p3 = temp;
+        [p1, p3] = [p3, p1];
     }
 
     let palmNormal = findNormalVector(p1, p2, p3);
@@ -52,44 +50,30 @@ function calculateDistance(point1, point2) {
 }
 
 function calculateCentroid(cluster) {
-    const centroid = { x: 0, y: 0, z: 0 };
     const numPoints = cluster.length;
-    for (const point of cluster) {
-        centroid.x += point.x;
-        centroid.y += point.y;
-        centroid.z += point.z;
-    }
-    centroid.x /= numPoints;
-    centroid.y /= numPoints;
-    centroid.z /= numPoints;
-    return centroid;
+    return cluster.reduce((a, b) => {
+        return {
+            x: a.x + b.x / numPoints,
+            y: a.y + b.y / numPoints,
+            z: a.z + b.z / numPoints
+        }
+    }, { x: 0, y: 0, z: 0 })
 }
 
 function calculateCompactnessEuclidean(cluster) {
     const centroid = calculateCentroid(cluster);
-    let sumDistance = 0;
-    for (const point of cluster) {
-        const distance = calculateDistance(point, centroid);
-        sumDistance += distance;
-    }
-    return sumDistance / cluster.length;
+    return cluster.reduce((sumDistance, point) => sumDistance + calculateDistance(point, centroid), 0) / cluster.length;
 }
 
 function handResultValid(result) {
-    if (result != undefined && result.landmarks.length) {
-        return true;
-    }
-    else {
-        return false;
-    }
+    return result?.landmarks?.length > 0;
 }
 
 function drawHandLandmarks(handLandmarks, landmarkColor, canvas) {
     canvas.noStroke();
     canvas.fill(landmarkColor);
-    for (let i = 0; i < handLandmarks.length; i++) {
-        const landmark = handLandmarks[i];
-        canvas.ellipse(landmark.x * width, landmark.y * height, 8, 8);
+    for (let landmark of handLandmarks) {
+        window.p.ellipse(landmark.x * width, landmark.y * height, 8, 8);
     }
 }
 
@@ -122,8 +106,8 @@ function drawPalmFill(landmarks, palmFill, canvas) {
     canvas.stroke("white");
     canvas.strokeWeight(2);
     canvas.beginShape();
-    for (let i = 0; i < palmLandmarks.length; i++) {
-        canvas.vertex(palmLandmarks[i].x * width, palmLandmarks[i].y * height);
+    for (let { x, y } of palmLandmarks) {
+        window.p.vertex(x * width, y * height);
     }
     canvas.endShape(window.p.CLOSE);
 }
