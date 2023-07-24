@@ -53,7 +53,7 @@ let sketch = function (p) {
         numOfFingerCharges: 1,
         trailCoeff: 8,
         fingerCompactnessRange: { min: 0.02, max: 0.06 },
-        handSmoothingRollingWindowFrameSize: 8,
+        handSmoothingRollingWindowFrameSize: 5,
         particleBlurPx: 3,
         handBlurPx: 30,
         manipulatedMaxSpeedScalerRange: { min: 0, max: 6 },
@@ -61,7 +61,8 @@ let sketch = function (p) {
         averageFrameRateWindow: 50,
         desiredFrameRate: 40,
         desiredFrameRateDelta: 3,
-        fixedParticleSink: { x: -500, y: 500 }
+        minimumParticles: 200,
+        fixedParticleSink: { x: -500, y: 500 },
     };
 
     InteractionSettings.manipulatedMaxSpeedScalerRange.max = InteractionSettings.particleMaxSpeedScaler * 2;
@@ -253,19 +254,31 @@ let sketch = function (p) {
             }
         }
 
-        if (key.key == "h") {
+        if (key.key == "o") {
             uxSettings.showHand = !uxSettings.showHand;
+
+            if (window.webcamRunning === true) {
+                if (!uxSettings.showHand) {
+                    document.getElementById("video").style.display = 'none';
+
+                }
+                else {
+                    document.getElementById("video").style.display = 'initial';
+                }
+            }
+
             if (!uxSettings.showHand) {
-                document.getElementById("video").style.display = 'none';
+                document.getElementById("overlayDiv").style.display = 'none';
+
             }
             else {
-                document.getElementById("video").style.display = 'initial';
+                document.getElementById("overlayDiv").style.display = 'flex';
             }
         }
 
         if (key.key == " ") {
             if (music != undefined) {
-                music.setVolume(0.5);
+                music.setVolume(0.4);
                 music.play();
 
             }
@@ -295,7 +308,6 @@ let sketch = function (p) {
     function songLoaded(song) {
         music = song;
         music.loop();
-        music.setVolume(0);
     }
 
     function updateSketchSize(w, h) {
@@ -382,7 +394,9 @@ let sketch = function (p) {
             particlesList.push(new Particle(uxSettings.fixedParticleSink));
         }
         else if (currentFr < uxSettings.desiredFrameRate - th) {
-            particlesList.pop();
+            if (particlesList.length > uxSettings.minimumParticles / 4) {
+                particlesList.pop();
+            }
         }
     }
 
