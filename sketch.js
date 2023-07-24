@@ -104,7 +104,7 @@ let sketch = function (p) {
         charges.push(new Charge(uxSettings.fixedParticleSink.x, uxSettings.fixedParticleSink.y, -0.0001));
 
         // let N = uxSettings.particlesPerPixel * width * height / 4;
-        let N = 1;
+        let N = uxSettings.minimumParticles / 4;
         let nc = uxSettings.nColor;
         let pc = uxSettings.pColor;
         let scl = uxSettings.particleMaxSpeedScaler;
