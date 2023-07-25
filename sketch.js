@@ -135,7 +135,7 @@ let sketch = function (p) {
     };
 
     p.draw = function () {
-        p.background(255);
+        p.background(255, 1);
 
         particleGraphics.background(0, uxSettings.trailCoeff);
         handGraphics.clear();
