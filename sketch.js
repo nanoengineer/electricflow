@@ -1,3 +1,4 @@
+p5.disableFriendlyErrors = true; //Better Performance
 
 import { enableCam } from './detection.js';
 
@@ -53,17 +54,19 @@ let sketch = function (p) {
         chargeFlip: 1,
         numOfAmbientCharges: 8,
         numOfFingerCharges: 1,
-        trailCoeff: 8,
+        trailCoeff: 12,
         fingerCompactnessRange: { min: 0.02, max: 0.06 },
         handSmoothingRollingWindowFrameSize: 5,
-        particleBlurPx: 3,
-        handBlurPx: 30,
+        palmOrientationSmoothingRollingWindowFrameSize: 60,
+        particleBlurPx: 1,
+        handBlurPx: 1,
         manipulatedMaxSpeedScalerRange: { min: 0, max: 6 },
         particlesPerPixel: 0.000375 * p.pixelDensity() * p.displayDensity(),
         averageFrameRateWindow: 50,
-        desiredFrameRate: 40,
+        desiredFrameRate: 50,
         desiredFrameRateDelta: 3,
-        minimumParticles: 200,
+        desireFrameRateWhenTracking: 40,
+        minimumParticles: 600,
         fixedParticleSink: { x: -500, y: 500 },
     };
 
@@ -83,8 +86,8 @@ let sketch = function (p) {
     let smoothedHandLandmarks = [];
 
     let fingersCompactnessBuffer = new CircularBuffer(uxSettings.handSmoothingRollingWindowFrameSize);
-    let averageFrameRateBuffer = new CircularBuffer(uxSettings.averageFrameRateWindow)
-    let palmOrientBuffer = new CircularBuffer(uxSettings.handSmoothingRollingWindowFrameSize);;
+    let averageFrameRateBuffer = new CircularBuffer(uxSettings.averageFrameRateWindow);
+    let palmOrientBuffer = new CircularBuffer(uxSettings.palmOrientationSmoothingRollingWindowFrameSize);
 
     let musicHigh;
     let musicLow;
@@ -132,7 +135,7 @@ let sketch = function (p) {
     };
 
     p.draw = function () {
-        p.background(0);
+        p.background(255);
 
         particleGraphics.background(0, uxSettings.trailCoeff);
         handGraphics.clear();
@@ -147,7 +150,6 @@ let sketch = function (p) {
         const l = colorList.length;
         const id = p.noise(ct) * (l);
 
-
         const i = p.floor(id);
         const d = id - i;
 
@@ -157,8 +159,8 @@ let sketch = function (p) {
         //Only evolve the ambient charges
         for (let i = 0; i < uxSettings.numOfAmbientCharges; i++) {
             let polarity = 1;
-            let x = p.noise(t + 5 + i) * 1.2 * width - 0.1 * width;
-            let y = p.noise(t + 10 + i) * 1.2 * height - 0.1 * height;
+            let x = p.noise(t + 5 + i) * 1.4 * width - 0.4 * width;
+            let y = p.noise(t + 10 + i) * 1.4 * height - 0.4 * height;
             charges[i].position.set([x, y]);
             //even index charges are sources, odd are sinks. 
             if ((i % 2) == 1) {
@@ -166,9 +168,6 @@ let sketch = function (p) {
             }
             charges[i].charge = p.noise(t + 20 * i) * (uxSettings.chargeMagnitude) * (polarity * uxSettings.chargeFlip)
         }
-
-        //generate keep adding particles until the specified framerate
-
 
         // setTestCharge(-0.5);
 
@@ -193,7 +192,6 @@ let sketch = function (p) {
             palmOrientBuffer.enqueue(palmOrient);
 
             let fieldColor = p.lerpColor(uxSettings.nColor, uxSettings.pColor, palmOrientBuffer.getAverage());
-            fieldColor.setAlpha(100);
 
             //Calculate compactness of finger tips
             fingersCompactnessBuffer.enqueue(calculateCompactnessEuclidean([wlm[4], wlm[8], wlm[12], wlm[16], wlm[20]]));
@@ -212,11 +210,19 @@ let sketch = function (p) {
         }
         else {
             clearHandCharges(uxSettings, charges);
-            generateParticlesUntilFramerate(aParticles, avgFr);
-            generateParticlesUntilFramerate(bParticles, avgFr);
-            generateParticlesUntilFramerate(cParticles, avgFr);
-            generateParticlesUntilFramerate(dParticles, avgFr);
         }
+
+        let target;
+        if (window.webcamRunning) {
+            target = uxSettings.desireFrameRateWhenTracking;
+        } else {
+            target = uxSettings.desiredFrameRate;
+        }
+
+        generateParticlesUntilFramerate(aParticles, avgFr, target);
+        generateParticlesUntilFramerate(bParticles, avgFr, target);
+        generateParticlesUntilFramerate(cParticles, avgFr, target);
+        generateParticlesUntilFramerate(dParticles, avgFr, target);
 
         runParticlesEngine(aParticles, charges, 10, particleGraphics);
         runParticlesEngine(bParticles, charges, 8, particleGraphics);
@@ -392,6 +398,8 @@ let sketch = function (p) {
 
         // Because the x-axis is reversed, we need to draw at different x position.
         //TODO: parameterize this
+        p.text(palmOrientBuffer.getAverage(), -width, 0.95 * height);
+        p.text(aParticles.length * 4, -width, 0.9 * height);
         p.text(p.nf(fps, 2, 0), -width, 0.85 * height);
         p.text(`Trail Coeff: ${uxSettings.trailCoeff}`, -width, 0.8 * height);
         p.text(`Max Speed Scaler: ${uxSettings.particleMaxSpeedScaler}`, -width, 0.75 * height);
@@ -429,12 +437,12 @@ let sketch = function (p) {
         }
     }
 
-    function generateParticlesUntilFramerate(particlesList, currentFr) {
+    function generateParticlesUntilFramerate(particlesList, currentFr, target) {
         const th = uxSettings.desiredFrameRateDelta;
-        if (currentFr > uxSettings.desiredFrameRate + th) {
+        if (currentFr > target + th) {
             particlesList.push(new Particle(uxSettings.fixedParticleSink));
         }
-        else if (currentFr < uxSettings.desiredFrameRate - th) {
+        else if (currentFr < target - th) {
             if (particlesList.length > uxSettings.minimumParticles / 4) {
                 particlesList.pop();
             }

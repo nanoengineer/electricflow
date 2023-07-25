@@ -1,52 +1,52 @@
-class FieldPoint {
-    #privateVector1 = window.p.createVector(0, 0);
+// class FieldPoint {
+//     #privateVector1 = window.p.createVector(0, 0);
 
-    constructor(x, y, p5) {
-        this.p = p5;
-        this.pos = window.p.createVector(x, y);
-        this.vector = window.p.createVector(0, 0);
-        this.unitVector = window.p.createVector(0, 0);
-        this.potential = 0;
-        this.negativeColor = window.p.color("#faab00");
-        this.positiveColor = window.p.color("#009efa");
-    }
+//     constructor(x, y, p5) {
+//         this.p = p5;
+//         this.pos = window.p.createVector(x, y);
+//         this.vector = window.p.createVector(0, 0);
+//         this.unitVector = window.p.createVector(0, 0);
+//         this.potential = 0;
+//         this.negativeColor = window.p.color("#faab00");
+//         this.positiveColor = window.p.color("#009efa");
+//     }
 
-    update(charges) {
-        this.#updateElectricFieldandPotential(charges, this.pos);
-    }
+//     update(charges) {
+//         this.#updateElectricFieldandPotential(charges, this.pos);
+//     }
 
-    draw() {
-        let vectorDrawLength = window.p.constrain(this.vector.mag() * 10, 0, 35);
-        window.p.stroke(window.p.lerpColor(this.negativeColor, this.positiveColor, window.p.map(this.potential, -1000, 1000, 0, 1)));
-        window.p.strokeWeight(2);
-        p5.Vector.normalize(this.vector, this.unitVector);
-        window.p.line(this.pos.x, this.pos.y, this.pos.x - this.unitVector.x * vectorDrawLength, this.pos.y - this.unitVector.y * vectorDrawLength)
-    }
+//     draw() {
+//         let vectorDrawLength = window.p.constrain(this.vector.mag() * 10, 0, 35);
+//         window.p.stroke(window.p.lerpColor(this.negativeColor, this.positiveColor, window.p.map(this.potential, -2000, 2000, 0, 1)));
+//         window.p.strokeWeight(2);
+//         p5.Vector.normalize(this.vector, this.unitVector);
+//         window.p.line(this.pos.x, this.pos.y, this.pos.x - this.unitVector.x * vectorDrawLength, this.pos.y - this.unitVector.y * vectorDrawLength)
+//     }
 
-    #updateElectricFieldandPotential(charges, point) {
+//     #updateElectricFieldandPotential(charges, point) {
 
-        const k = 100000;
-        this.vector.set([0, 0]);
-        this.potential = 0;
+//         const k = 100000;
+//         this.vector.set([0, 0]);
+//         this.potential = 0;
 
-        //electric potential kq/r
-        //electric field kq/r^2
+//         //electric potential kq/r
+//         //electric field kq/r^2
 
-        for (let i = 0; i < charges.length; i++) {
-            const chCharge = charges[i].chargeMag;
-            if (chCharge == 0) {
-                continue;
-            }
-            const chPos = charges[i].position;
-            const distance = chPos.dist(point);
-            const v = k * chCharge / (distance + 0.1); //prevent infinity
-            const fieldStrength = v / (distance + 0.1);
-            this.#privateVector1.set([chPos.x - point.x, chPos.y - point.y]).normalize();
-            this.potential += v;
-            this.vector.add(this.#privateVector1.mult(fieldStrength));
-        }
-    }
-}
+//         for (let i = 0; i < charges.length; i++) {
+//             const chCharge = charges[i].chargeMag;
+//             if (chCharge == 0) {
+//                 continue;
+//             }
+//             const chPos = charges[i].position;
+//             const distance = chPos.dist(point);
+//             const v = k * chCharge / (distance + 0.1); //prevent infinity
+//             const fieldStrength = v / (distance + 0.1);
+//             this.#privateVector1.set([chPos.x - point.x, chPos.y - point.y]).normalize();
+//             this.potential += v;
+//             this.vector.add(this.#privateVector1.mult(fieldStrength));
+//         }
+//     }
+// }
 
 class Charge {
 
@@ -92,7 +92,7 @@ class Particle {
     }
 
     updateMotion() {
-        this.vel.add(this.acc.mult(-1)); //deal with flipped canvas
+        this.vel.add(-this.acc.x, -this.acc.y); //deal with flipped canvas
         this.vel.limit(this.maxspeed * window.p.random(0.9, 1.1) / window.p.frameRate());
         this.pos.add(this.vel);
         this.acc.set([0, 0]);
@@ -138,7 +138,7 @@ class Particle {
             const fieldStrength = v / (distance + 1);
             this.#privateVector1.set([chPos.x - this.pos.x, chPos.y - this.pos.y]).normalize();
             this.potential += v;
-            this.acc.add(this.#privateVector1.mult(fieldStrength));
+            this.acc.add(this.#privateVector1.x * fieldStrength, this.#privateVector1.y * fieldStrength);
         }
     }
 
@@ -169,26 +169,6 @@ class Particle {
     }
 
     edges(border) {
-        // if (this.pos.x > window.width + border) {
-        //     this.pos.x = 0 - border;
-        //     this.updatePrev();
-
-        // }
-        // if (this.pos.x < 0 - border) {
-        //     this.pos.x = window.width + border;
-        //     this.updatePrev();
-
-        // }
-        // if (this.pos.y > window.height + border) {
-        //     this.pos.y = 0 - border;
-        //     this.updatePrev();
-
-        // }
-        // if (this.pos.y < 0 - border) {
-        //     this.pos.y = window.height + border;
-        //     this.updatePrev();
-        // }
-
         if (this.pos.x > window.width + border || this.pos.x < 0 - border || this.pos.y > window.height + border || this.pos.y < 0 - border) {
             this.pos.x = this.fixedSink.x;
             this.pos.y = this.fixedSink.y;
