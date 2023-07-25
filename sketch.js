@@ -57,9 +57,9 @@ let sketch = function (p) {
         trailCoeff: 12,
         fingerCompactnessRange: { min: 0.02, max: 0.06 },
         handSmoothingRollingWindowFrameSize: 5,
-        palmOrientationSmoothingRollingWindowFrameSize: 60,
+        palmOrientationSmoothingRollingWindowFrameSize: 20,
         particleBlurPx: 1,
-        handBlurPx: 1,
+        handBlurPx: 20,
         manipulatedMaxSpeedScalerRange: { min: 0, max: 6 },
         particlesPerPixel: 0.000375 * p.pixelDensity() * p.displayDensity(),
         averageFrameRateWindow: 50,
@@ -91,9 +91,10 @@ let sketch = function (p) {
 
     let musicHigh;
     let musicLow;
+
     p.preload = function () {
-        musicHigh = p.loadSound('./media_assets/LordOfTheDawn-JesseGallagher.mp3', highSongLoaded);
-        musicLow = p.loadSound('./media_assets/LordOfTheDawn-JesseGallagher.mp3', lowSongLoaded);
+        p.loadSound('./media_assets/LordOfTheDawn-JesseGallagher.mp3', highSongLoaded);
+        p.loadSound('./media_assets/LordOfTheDawn-JesseGallagher.mp3', lowSongLoaded);
     }
 
     p.setup = function () {
@@ -159,8 +160,9 @@ let sketch = function (p) {
         //Only evolve the ambient charges
         for (let i = 0; i < uxSettings.numOfAmbientCharges; i++) {
             let polarity = 1;
-            let x = p.noise(t + 5 + i) * 1.4 * width - 0.4 * width;
-            let y = p.noise(t + 10 + i) * 1.4 * height - 0.4 * height;
+            //make the avaiable space to evolve from -0.2 to 1.2 of screen
+            let x = p.noise(t + 5 + i) * 1.4 * width - 0.2 * width;
+            let y = p.noise(t + 10 + i) * 1.4 * height - 0.2 * height;
             charges[i].position.set([x, y]);
             //even index charges are sources, odd are sinks. 
             if ((i % 2) == 1) {
@@ -197,7 +199,7 @@ let sketch = function (p) {
             fingersCompactnessBuffer.enqueue(calculateCompactnessEuclidean([wlm[4], wlm[8], wlm[12], wlm[16], wlm[20]]));
             const smoothedCompactness = fingersCompactnessBuffer.getAverage();
 
-            updateManipulation(smoothedCompactness, palmOrient);
+            updateManipulation(smoothedCompactness, palmOrientBuffer.getAverage());
 
 
             if (uxSettings.showHand) {
@@ -212,6 +214,7 @@ let sketch = function (p) {
             clearHandCharges(uxSettings, charges);
         }
 
+        //Set different framerate targets depending on if webcam is on or off
         let target;
         if (window.webcamRunning) {
             target = uxSettings.desireFrameRateWhenTracking;
@@ -293,18 +296,15 @@ let sketch = function (p) {
 
         if (key.key == " ") {
             if (musicHigh != undefined && musicLow != undefined) {
-                musicHigh.setVolume(0.2);
-                musicLow.setVolume(1);
-                musicLow.rate(0.5);
                 musicHigh.play();
                 musicLow.play();
             }
             let fs = p.fullscreen();
-            if (!fs) {
-                updateSketchSize(p.displayWidth, p.displayHeight);
-            } else {
-                updateSketchSize(p.windowWidth, p.windowHeight);
-            }
+            // if (!fs) {
+            //     updateSketchSize(p.displayWidth, p.displayHeight);
+            // } else {
+            //     updateSketchSize(p.windowWidth, p.windowHeight);
+            // }
             p.fullscreen(!fs);
         }
 
@@ -324,12 +324,13 @@ let sketch = function (p) {
 
     function highSongLoaded(song) {
         musicHigh = song;
-        musicLow.setVolume(0.2);
+        musicHigh.setVolume(0.5);
         musicHigh.loop();
     }
     function lowSongLoaded(song) {
         musicLow = song;
         musicLow.setVolume(1.0);
+        musicLow.rate(0.5);
         musicLow.loop();
     }
 
@@ -369,6 +370,7 @@ let sketch = function (p) {
             }
             else {
                 document.getElementById("video").style.display = 'none';
+                uxSettings.showHand = false;
             }
         }
     }
@@ -428,9 +430,9 @@ let sketch = function (p) {
         uxSettings.perlinTimestepScaler = p.map(compact, cmin, cmax, 0.2, 2);
         uxSettings.chargeFlip = p.map(palmOrient, 0, 1, -1, 1);
 
-        if (musicHigh != undefined) {
+        if (musicHigh != undefined && musicHigh != undefined) {
             let a = p.map(compact, cmin, cmax, 0.0, 0.5);
-            const v = p.constrain(a, 0.05, 0.5);
+            const v = p.constrain(a, 0.05, 1.0);
             const s = p.constrain(a, 0.1, 0.5);
             musicHigh.setVolume(v);
             musicLow.rate(s);
