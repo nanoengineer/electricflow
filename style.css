@@ -59,8 +59,7 @@ em {
 
 #overlayDiv {
   font-family: 'Courier New', monospace;
-  font-weight: bold;
-
+  font-weight: normal;
   position: absolute;
   /* Center the div vertically */
   left: 0;
@@ -90,27 +89,40 @@ em {
 
 @media (max-width: 1130px) {
   #overlayDiv {
-    width: 300px;
+    width: 350px;
     /* Keep the width fixed at 200px */
   }
 }
 
 .intro {
-  font-size: 30px;
-  margin-bottom: 40%
+  font-size: 20px;
+  margin-bottom: 20%;
+  margin-top: 5%;
+  margin-left: 5%;
+  text-align: left;
 }
 
 .textItem {
   width: 90%;
-  margin: 5%;
+  height: 2%;
+  margin-bottom: 1%;
   border-radius: 5px;
   background-color: rgba(16, 15, 15, 0.8);
   color: white;
   padding: 10px;
   font-size: 16px;
   text-align: left;
-  font-weight: normal;
+  font-weight: bold;
   /* align-items: flex-start; */
+}
+
+.subtitle {
+  width: 90%;
+  height: 2%;
+  margin-bottom: 5%;
+  font-size: 20px;
+  text-align: center;
+  font-weight: normal;
 }
 
 /* Media query to dynamically adjust the div's position based on window size
