@@ -76,7 +76,6 @@ em {
   text-align: center;
   align-items: center;
 
-  /* align-items: flex-start; */
   /* Justify the items to the left */
   justify-content: center;
   padding: 10px;
@@ -85,9 +84,18 @@ em {
   /* Set text color to white */
   font-size: 16px;
   /* Set font size for the text */
+  max-height: 100vh;
+  overflow: auto;
 }
 
 @media (max-width: 1130px) {
+  #overlayDiv {
+    width: 350px;
+    /* Keep the width fixed at 200px */
+  }
+}
+
+@media (min-width: 1130px) {
   #overlayDiv {
     width: 350px;
     /* Keep the width fixed at 200px */
