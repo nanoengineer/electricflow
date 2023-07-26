@@ -46,6 +46,7 @@ let sketch = function (p) {
         showFrameRate: false,
         nColor: colorList[0][0],
         pcolor: colorList[0][1],
+        loadingScreenColor: colorList[p.random([...Array(colorList.length).keys()])][p.random([0, 1])],
         particleMaxSpeedScaler: 6,
         perlinTimestepScaler: 1,
         perlinNoiseTimeStep: 0.1,
@@ -101,11 +102,7 @@ let sketch = function (p) {
 
     p.preload = function () {
         p.loadSound('./media_assets/LordOfTheDawn-JesseGallagher.mp3', highSongLoaded);
-        p.loadSound('./media_assets/LordOfTheDawn-JesseGallagher.mp3', lowSongLoaded, 0, whileLoading);
-    }
-
-    function whileLoading(pc) {
-        soundLoadingFlags.percentage = pc;
+        p.loadSound('./media_assets/LordOfTheDawn-JesseGallagher.mp3', lowSongLoaded, 0, (pc) => soundLoadingFlags.percentage = pc);
     }
 
     p.setup = function () {
@@ -146,9 +143,9 @@ let sketch = function (p) {
         p.background(0);
     };
 
-    function loadingScreen(angle) {
-        let radius = 75;
-        let angle2 = angle + 1;
+    function loadingScreen(angle, radius) {
+        let angle2 = angle + p.PI * 2 / 3;
+        let angle3 = angle2 + p.PI * 2 / 3;
         p.background(0, 15);
         p.push();
         p.translate(width / 2, height / 2); // Move the origin to the center of the screen
@@ -157,16 +154,19 @@ let sketch = function (p) {
         const y1 = radius * p.sin(angle);
         const x2 = radius * p.cos(angle2);
         const y2 = radius * p.sin(angle2);
+        const x3 = radius * p.cos(angle3);
+        const y3 = radius * p.sin(angle3);
         p.noStroke();
-        p.fill(255, 100); // Circle color (white)
-        p.ellipse(x1, y1, 10, 10); // Draw the circle
-        p.ellipse(x2, y2, 10, 10); // Draw the circle
+        p.fill(uxSettings.loadingScreenColor);
+        p.ellipse(x1, y1, 10, 10);
+        p.ellipse(x2, y2, 10, 10);
+        p.ellipse(x3, y3, 10, 10);
         p.pop();
     }
 
     p.draw = function () {
         if (soundLoadingFlags.finished == false) {
-            loadingScreen(a);
+            loadingScreen(a, 40);
             a += 0.025;
         }
         //Start the sketch
