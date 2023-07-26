@@ -29,7 +29,7 @@ const createHandLandmarker = async () => {
             delegate: "GPU"
         },
         runningMode: runningMode,
-        numHands: 1
+        numHands: 2
     });
 };
 createHandLandmarker();

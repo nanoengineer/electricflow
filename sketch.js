@@ -48,8 +48,8 @@ let sketch = function (p) {
         pcolor: colorList[0][1],
         loadingScreenColor: colorList[p.random([...Array(colorList.length).keys()])][p.random([0, 1])],
         particleMaxSpeedScaler: 6,
-        perlinTimestepScaler: 1,
-        perlinNoiseTimeStep: 0.1,
+        perlinTimestepScaler: 2,
+        perlinNoiseTimeStep: 0.05,
         chargeMagnitude: 0.2,
         handChargeMultiplier: 2,
         chargeFlip: 1,
@@ -65,7 +65,7 @@ let sketch = function (p) {
         particlesPerPixel: 0.000375 * p.pixelDensity() * p.displayDensity(),
         averageFrameRateWindow: 50,
         desiredFrameRate: 50,
-        desiredFrameRateDelta: 3,
+        desiredFrameRateDelta: 2,
         desireFrameRateWhenTracking: 40,
         minimumParticles: 600,
         fixedParticleSink: { x: -500, y: 500 },
@@ -95,6 +95,7 @@ let sketch = function (p) {
     let averageFrameRateBuffer = new CircularBuffer(uxSettings.averageFrameRateWindow);
     let palmOrientBuffer = new CircularBuffer(uxSettings.palmOrientationSmoothingRollingWindowFrameSize);
 
+    //sounds
     let musicHigh;
     let musicLow;
 
@@ -143,27 +144,6 @@ let sketch = function (p) {
         p.background(0);
     };
 
-    function loadingScreen(angle, radius) {
-        let angle2 = angle + p.PI * 2 / 3;
-        let angle3 = angle2 + p.PI * 2 / 3;
-        p.background(0, 15);
-        p.push();
-        p.translate(width / 2, height / 2); // Move the origin to the center of the screen
-        // Calculate the position of the circle based on the angle
-        const x1 = radius * p.cos(angle);
-        const y1 = radius * p.sin(angle);
-        const x2 = radius * p.cos(angle2);
-        const y2 = radius * p.sin(angle2);
-        const x3 = radius * p.cos(angle3);
-        const y3 = radius * p.sin(angle3);
-        p.noStroke();
-        p.fill(uxSettings.loadingScreenColor);
-        p.ellipse(x1, y1, 10, 10);
-        p.ellipse(x2, y2, 10, 10);
-        p.ellipse(x3, y3, 10, 10);
-        p.pop();
-    }
-
     p.draw = function () {
         if (soundLoadingFlags.finished == false) {
             loadingScreen(a, 40);
@@ -171,16 +151,16 @@ let sketch = function (p) {
         }
         //Start the sketch
         if (soundLoadingFlags.finished == true) {
-            p.background(255, 1);
+            p.background(255, uxSettings.trailCoeff);
             particleGraphics.background(0, uxSettings.trailCoeff);
             handGraphics.clear();
 
             averageFrameRateBuffer.enqueue(p.frameRate());
             const avgFr = averageFrameRateBuffer.getAverage();
 
-            t = t + uxSettings.perlinNoiseTimeStep * uxSettings.perlinTimestepScaler / (p.frameRate() + 0.001);
+            t = t + uxSettings.perlinNoiseTimeStep / (p.frameRate() + 0.001);
 
-            ct = ct + uxSettings.perlinNoiseTimeStep * uxSettings.perlinTimestepScaler * 0.5 / (p.frameRate() + 0.001);
+            ct = ct + uxSettings.perlinNoiseTimeStep * uxSettings.perlinTimestepScaler / (p.frameRate() + 0.001);
 
             const l = colorList.length;
             const id = p.noise(ct) * (l);
@@ -241,11 +221,11 @@ let sketch = function (p) {
                 }
 
                 if (uxSettings.numOfFingerCharges > 0) {
-                    setHandCharges(uxSettings, smoothedHandLandmarks, uxSettings.chargeMagnitude * uxSettings.handChargeMultiplier);
+                    setHandCenterCharge(uxSettings, smoothedHandLandmarks, uxSettings.chargeMagnitude * uxSettings.handChargeMultiplier);
                 }
             }
             else {
-                clearHandCharges(uxSettings, charges);
+                clearHandCenterCharge(uxSettings);
             }
 
             //Set different framerate targets depending on if webcam is on or off
@@ -391,6 +371,27 @@ let sketch = function (p) {
         welcomeGraphics.text("Welcome to Bloom.Electric", width / 2, height / 2);
     }
 
+    function loadingScreen(angle, radius) {
+        let angle2 = angle + p.PI * 2 / 3;
+        let angle3 = angle2 + p.PI * 2 / 3;
+        p.background(0, 15);
+        p.push();
+        p.translate(width / 2, height / 2); // Move the origin to the center of the screen
+        // Calculate the position of the circle based on the angle
+        const x1 = radius * p.cos(angle);
+        const y1 = radius * p.sin(angle);
+        const x2 = radius * p.cos(angle2);
+        const y2 = radius * p.sin(angle2);
+        const x3 = radius * p.cos(angle3);
+        const y3 = radius * p.sin(angle3);
+        p.noStroke();
+        p.fill(uxSettings.loadingScreenColor);
+        p.ellipse(x1, y1, 10, 10);
+        p.ellipse(x2, y2, 10, 10);
+        p.ellipse(x3, y3, 10, 10);
+        p.pop();
+    }
+
     function showCamera(flag) {
         if (window.webcamRunning === true) {
             if (flag) {
@@ -471,11 +472,15 @@ let sketch = function (p) {
     function generateParticlesUntilFramerate(particlesList, currentFr, target) {
         const th = uxSettings.desiredFrameRateDelta;
         if (currentFr > target + th) {
-            particlesList.push(new Particle(uxSettings.fixedParticleSink));
+            for (let i = 0; i < 10; i++) {
+                particlesList.push(new Particle(uxSettings.fixedParticleSink));
+            }
         }
         else if (currentFr < target - th) {
             if (particlesList.length > uxSettings.minimumParticles / 4) {
-                particlesList.pop();
+                for (let i = 0; i < 20; i++) {
+                    particlesList.pop();
+                }
             }
         }
     }
@@ -508,7 +513,7 @@ let sketch = function (p) {
 
     //Setting and clear charges attached to hand
 
-    function setHandCharges(settings, lm, value) {
+    function setHandCenterCharge(settings, lm, value) {
         let palmCentroid = calculateCentroid([lm[4], lm[8], lm[12], lm[16], lm[20]]);
         for (let i = settings.numOfAmbientCharges; i < settings.numOfAmbientCharges + settings.numOfFingerCharges; i++) {
             // charges[i].position.set([lm[(i - settings.numOfAmbientCharges + 1) * 4].x * width, lm[(i - settings.numOfAmbientCharges + 1) * 4].y * height]);
@@ -516,11 +521,14 @@ let sketch = function (p) {
             charges[i].charge = -value * settings.chargeFlip;
         }
     }
-    function clearHandCharges(settings, charges) {
+    function clearHandCenterCharge(settings) {
         for (let i = settings.numOfAmbientCharges; i < settings.numOfAmbientCharges + settings.numOfFingerCharges; i++) {
             charges[i].position.set([0, 0]);
             charges[i].charge = 0;
         }
+    }
+    function controlAllCharges(settings, lm) {
+
     }
     function setAmbientChargeswithPalmOrientation(settings, orientation) {
         //Palm to change ambient charges
