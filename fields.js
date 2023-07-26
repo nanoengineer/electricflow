@@ -136,7 +136,8 @@ class Particle {
             const distance = chPos.dist(this.pos);
             const v = k * chCharge / (distance + 1); //prevent infinity
             const fieldStrength = v / (distance + 1);
-            this.#privateVector1.set([chPos.x - this.pos.x, chPos.y - this.pos.y]).normalize();
+            // this.#privateVector1.set([chPos.x - this.pos.x, chPos.y - this.pos.y]).normalize();
+            this.#privateVector1.set([chPos.x - this.pos.x, chPos.y - this.pos.y]);
             this.potential += v;
             this.acc.add(this.#privateVector1.x * fieldStrength, this.#privateVector1.y * fieldStrength);
         }
@@ -151,8 +152,8 @@ class Particle {
 
     showWhite(canvas) {
         canvas.stroke(255);
-        canvas.line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
-        // canvas.point(this.pos.x, this.pos.y);
+        // canvas.line(this.pos.x, this.pos.y, this.prevPos.x, this.prevPos.y);
+        canvas.point(this.pos.x, this.pos.y);
         this.updatePrev();
     }
 

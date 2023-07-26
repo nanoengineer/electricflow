@@ -65,7 +65,7 @@ let sketch = function (p) {
         particlesPerPixel: 0.000375 * p.pixelDensity() * p.displayDensity(),
         averageFrameRateWindow: 50,
         desiredFrameRate: 50,
-        desiredFrameRateDelta: 2,
+        desiredFrameRateDelta: 3,
         desireFrameRateWhenTracking: 30,
         minimumParticles: 600,
         fixedParticleSink: { x: -500, y: 500 },
@@ -108,6 +108,7 @@ let sketch = function (p) {
     }
 
     p.setup = function () {
+        p.frameRate(120);
         p.createCanvas(width, height);
         particleGraphics = p.createGraphics(width, height);
         handGraphics = p.createGraphics(width, height);
@@ -223,8 +224,12 @@ let sketch = function (p) {
                     controlFingerTipCharges(results.landmarks[0], results.handednesses[0][0].categoryName);
                     controlFingerTipCharges(results.landmarks[1], results.handednesses[1][0].categoryName);
                     uxSettings.particleMaxSpeedScaler = 15;
-                    clearHandCenterCharge(uxSettings);
                     uxSettings.particleReentryMode = "wrap";
+                    clearHandCenterCharge(uxSettings);
+                    if (uxSettings.showHand) {
+                        drawHandConnections(results.landmarks[0], handGraphics, uxSettings.pColor);
+                        drawHandConnections(results.landmarks[1], handGraphics, uxSettings.nColor);
+                    }
                 }
 
             }
