@@ -53,22 +53,23 @@ let sketch = function (p) {
         chargeMagnitude: 0.2,
         handChargeMultiplier: 2,
         chargeFlip: 1,
-        numOfAmbientCharges: 8,
-        numOfFingerCharges: 1,
+        numOfAmbientCharges: 10,
+        numOfHandCenterCharges: 1,
         trailCoeff: 12,
         fingerCompactnessRange: { min: 0.02, max: 0.06 },
         handSmoothingRollingWindowFrameSize: 5,
         palmOrientationSmoothingRollingWindowFrameSize: 20,
-        particleBlurPx: 1,
+        particleBlurPx: 3,
         handBlurPx: 20,
         manipulatedMaxSpeedScalerRange: { min: 0, max: 6 },
         particlesPerPixel: 0.000375 * p.pixelDensity() * p.displayDensity(),
         averageFrameRateWindow: 50,
         desiredFrameRate: 50,
         desiredFrameRateDelta: 2,
-        desireFrameRateWhenTracking: 40,
+        desireFrameRateWhenTracking: 30,
         minimumParticles: 600,
         fixedParticleSink: { x: -500, y: 500 },
+        particleReentryMode: "source"
     };
 
     let soundLoadingFlags = {
@@ -113,7 +114,7 @@ let sketch = function (p) {
         welcomeGraphics = p.createGraphics(width, height);
 
         //Setting up charges
-        for (let i = 0; i < uxSettings.numOfAmbientCharges + uxSettings.numOfFingerCharges; i++) {
+        for (let i = 0; i < uxSettings.numOfAmbientCharges + uxSettings.numOfHandCenterCharges; i++) {
             charges.push(new Charge(0, 0, 0));
         }
 
@@ -159,24 +160,16 @@ let sketch = function (p) {
             const avgFr = averageFrameRateBuffer.getAverage();
 
             t = t + uxSettings.perlinNoiseTimeStep / (p.frameRate() + 0.001);
-
             ct = ct + uxSettings.perlinNoiseTimeStep * uxSettings.perlinTimestepScaler / (p.frameRate() + 0.001);
 
-            const l = colorList.length;
-            const id = p.noise(ct) * (l);
-
-            const i = p.floor(id);
-            const d = id - i;
-
-            uxSettings.nColor = p.lerpColor(colorList[i][0], colorList[(i + 1) % l][0], d);
-            uxSettings.pColor = p.lerpColor(colorList[i][1], colorList[(i + 1) % l][1], d);
+            evolveParticleColors(ct);
 
             //Only evolve the ambient charges
             for (let i = 0; i < uxSettings.numOfAmbientCharges; i++) {
                 let polarity = 1;
                 //make the avaiable space to evolve from -0.2 to 1.2 of screen
-                let x = p.noise(t + 5 + i) * 1.4 * width - 0.2 * width;
-                let y = p.noise(t + 10 + i) * 1.4 * height - 0.2 * height;
+                let x = p.noise(t + 5 + i * 4) * 1.4 * width - 0.2 * width;
+                let y = p.noise(t + 10 + i * 12) * 1.4 * height - 0.2 * height;
                 charges[i].position.set([x, y]);
                 //even index charges are sources, odd are sinks. 
                 if ((i % 2) == 1) {
@@ -191,41 +184,52 @@ let sketch = function (p) {
             let results = window.handDetectionResults;
 
             if (handResultValid(results)) {
-                let hand = results.handednesses[0][0];
-                let dotColor = leftHandColor;
-                if (hand.categoryName == 'Right') {
-                    dotColor = rightHandColor;
+                if (results.handednesses.length == 1) {
+                    let hand = results.handednesses[0][0];
+                    let dotColor = leftHandColor;
+                    if (hand.categoryName == 'Right') {
+                        dotColor = rightHandColor;
+                    }
+                    const lm = results.landmarks[0];
+                    const wlm = results.worldLandmarks[0];
+
+                    for (let i = 0; i < lm.length; i++) {
+                        handCoordinatesBuffer[i].enqueue([lm[i].x, lm[i].y]);
+                        smoothedHandLandmarks[i].set(handCoordinatesBuffer[i].getAverage());
+                    }
+
+                    const palmOrient = getPalmOrientation(wlm, hand.categoryName);
+                    palmOrientBuffer.enqueue(palmOrient);
+
+                    let fieldColor = p.lerpColor(uxSettings.nColor, uxSettings.pColor, palmOrientBuffer.getAverage());
+
+                    //Calculate compactness of finger tips
+                    fingersCompactnessBuffer.enqueue(calculateCompactnessEuclidean([wlm[4], wlm[8], wlm[12], wlm[16], wlm[20]]));
+                    const smoothedCompactness = fingersCompactnessBuffer.getAverage();
+
+                    updateManipulation(smoothedCompactness, palmOrientBuffer.getAverage());
+
+
+                    if (uxSettings.showHand) {
+                        drawHandConnections(smoothedHandLandmarks, handGraphics, fieldColor);
+                    }
+
+                    if (uxSettings.numOfHandCenterCharges > 0) {
+                        setHandCenterCharge(uxSettings, smoothedHandLandmarks, uxSettings.chargeMagnitude * uxSettings.handChargeMultiplier);
+                    }
+                    uxSettings.particleReentryMode = "source";
                 }
-                const lm = results.landmarks[0];
-                const wlm = results.worldLandmarks[0];
-
-                for (let i = 0; i < lm.length; i++) {
-                    handCoordinatesBuffer[i].enqueue([lm[i].x, lm[i].y]);
-                    smoothedHandLandmarks[i].set(handCoordinatesBuffer[i].getAverage());
+                else if (results.handednesses.length == 2) {
+                    controlFingerTipCharges(results.landmarks[0], results.handednesses[0][0].categoryName);
+                    controlFingerTipCharges(results.landmarks[1], results.handednesses[1][0].categoryName);
+                    uxSettings.particleMaxSpeedScaler = 15;
+                    clearHandCenterCharge(uxSettings);
+                    uxSettings.particleReentryMode = "wrap";
                 }
 
-                const palmOrient = getPalmOrientation(wlm, hand.categoryName);
-                palmOrientBuffer.enqueue(palmOrient);
-
-                let fieldColor = p.lerpColor(uxSettings.nColor, uxSettings.pColor, palmOrientBuffer.getAverage());
-
-                //Calculate compactness of finger tips
-                fingersCompactnessBuffer.enqueue(calculateCompactnessEuclidean([wlm[4], wlm[8], wlm[12], wlm[16], wlm[20]]));
-                const smoothedCompactness = fingersCompactnessBuffer.getAverage();
-
-                updateManipulation(smoothedCompactness, palmOrientBuffer.getAverage());
-
-
-                if (uxSettings.showHand) {
-                    drawHandConnections(smoothedHandLandmarks, handGraphics, fieldColor);
-                }
-
-                if (uxSettings.numOfFingerCharges > 0) {
-                    setHandCenterCharge(uxSettings, smoothedHandLandmarks, uxSettings.chargeMagnitude * uxSettings.handChargeMultiplier);
-                }
             }
             else {
-                clearHandCenterCharge(uxSettings);
+
             }
 
             //Set different framerate targets depending on if webcam is on or off
@@ -241,12 +245,12 @@ let sketch = function (p) {
             generateParticlesUntilFramerate(cParticles, avgFr, target);
             generateParticlesUntilFramerate(dParticles, avgFr, target);
 
-            runParticlesEngine(aParticles, charges, 10, particleGraphics);
-            runParticlesEngine(bParticles, charges, 8, particleGraphics);
-            runParticlesEngine(cParticles, charges, 6, particleGraphics);
-            runParticlesEngine(dParticles, charges, 4, particleGraphics);
+            runParticlesEngine(aParticles, charges, 9, particleGraphics);
+            runParticlesEngine(bParticles, charges, 6, particleGraphics);
+            runParticlesEngine(cParticles, charges, 4, particleGraphics);
+            runParticlesEngine(dParticles, charges, 3, particleGraphics);
 
-            p.drawingContext.filter = `blur(${uxSettings.particleBlurPx}px)`;
+            p.drawingContext.filter = `blur(${p.noise(t) * uxSettings.particleBlurPx}px)`;
             p.image(particleGraphics, 0, 0);
             p.drawingContext.filter = `blur(${uxSettings.handBlurPx}px)`;
             p.image(handGraphics, 0, 0);
@@ -341,6 +345,16 @@ let sketch = function (p) {
         musicLow.setVolume(1.0);
         musicLow.rate(0.5);
         soundLoadingFlags.finished = true;
+    }
+
+    function evolveParticleColors(ct) {
+        const l = colorList.length;
+        const id = p.noise(ct) * (l);
+        const i = p.floor(id);
+        const d = id - i;
+
+        uxSettings.nColor = p.lerpColor(colorList[i][0], colorList[(i + 1) % l][0], d);
+        uxSettings.pColor = p.lerpColor(colorList[i][1], colorList[(i + 1) % l][1], d);
     }
 
     function updateSketchSize(w, h) {
@@ -469,6 +483,22 @@ let sketch = function (p) {
         }
     }
 
+    function controlFingerTipCharges(lm, handedness) {
+        let incOffset = 0; //
+        let halfCharges = p.floor(uxSettings.numOfAmbientCharges / 2);
+
+        if (handedness == "Right") {
+            incOffset = halfCharges;
+        }
+        const pol = incOffset > 0 ? 1 : -1;
+
+        for (let i = 0 + incOffset; i < halfCharges + incOffset; i++) {
+            charges[i].position = p.createVector(lm[(i - incOffset + 1) * 4].x * width, lm[(i - incOffset + 1) * 4].y * height);
+            charges[i].charge = uxSettings.chargeMagnitude * pol;
+        }
+
+    }
+
     function generateParticlesUntilFramerate(particlesList, currentFr, target) {
         const th = uxSettings.desiredFrameRateDelta;
         if (currentFr > target + th) {
@@ -493,7 +523,7 @@ let sketch = function (p) {
             particles[i].followField(charges);
             particles[i].maxspeed = dotSize * uxSettings.particleMaxSpeedScaler;
             particles[i].updateMotion();
-            particles[i].edges(0.05 * height);
+            particles[i].edges(0.5 * height, uxSettings.particleReentryMode);
             particles[i].setColors([uxSettings.nColor, uxSettings.pColor]);
             particles[i].show(canvas);
             // particles[i].showWhite(canvas);
@@ -515,20 +545,17 @@ let sketch = function (p) {
 
     function setHandCenterCharge(settings, lm, value) {
         let palmCentroid = calculateCentroid([lm[4], lm[8], lm[12], lm[16], lm[20]]);
-        for (let i = settings.numOfAmbientCharges; i < settings.numOfAmbientCharges + settings.numOfFingerCharges; i++) {
+        for (let i = settings.numOfAmbientCharges; i < settings.numOfAmbientCharges + settings.numOfHandCenterCharges; i++) {
             // charges[i].position.set([lm[(i - settings.numOfAmbientCharges + 1) * 4].x * width, lm[(i - settings.numOfAmbientCharges + 1) * 4].y * height]);
             charges[i].position.set(palmCentroid.x * width, palmCentroid.y * height);
             charges[i].charge = -value * settings.chargeFlip;
         }
     }
     function clearHandCenterCharge(settings) {
-        for (let i = settings.numOfAmbientCharges; i < settings.numOfAmbientCharges + settings.numOfFingerCharges; i++) {
+        for (let i = settings.numOfAmbientCharges; i < settings.numOfAmbientCharges + settings.numOfHandCenterCharges; i++) {
             charges[i].position.set([0, 0]);
             charges[i].charge = 0;
         }
-    }
-    function controlAllCharges(settings, lm) {
-
     }
     function setAmbientChargeswithPalmOrientation(settings, orientation) {
         //Palm to change ambient charges

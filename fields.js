@@ -111,7 +111,7 @@ class Particle {
         if (x <= window.width && x >= 0 && y <= window.height && y >= 0) {
             if (index < fieldPoints.length && index >= 0) {
                 let force = fieldPoints[index].vector;
-                this.acc.add(force.add(window.p.random(-0.02, 0.02)));
+                this.acc.add(force.add(window.p.random(-0.1, 0.1)));
                 this.potential = fieldPoints[index].potential;
             }
         } else {
@@ -168,11 +168,33 @@ class Particle {
         this.prevPos.set(this.pos);
     }
 
-    edges(border) {
-        if (this.pos.x > window.width + border || this.pos.x < 0 - border || this.pos.y > window.height + border || this.pos.y < 0 - border) {
-            this.pos.x = this.fixedSink.x;
-            this.pos.y = this.fixedSink.y;
-            this.updatePrev();
+    edges(border, mode) {
+        if (mode == "source") {
+            if (this.pos.x > window.width + border || this.pos.x < 0 - border || this.pos.y > window.height + border || this.pos.y < 0 - border) {
+                this.pos.x = this.fixedSink.x;
+                this.pos.y = this.fixedSink.y;
+                this.updatePrev();
+            }
+        } else if (mode == "wrap") {
+            if (this.pos.x > width + border) {
+                this.pos.x = 0 - border;
+                this.updatePrev();
+            }
+            if (this.pos.x < 0 - border) {
+                this.pos.x = width + border;
+                this.updatePrev();
+                // this.vel.set([0, 0]);
+            }
+            if (this.pos.y > height + border) {
+                this.pos.y = 0 - border;
+                this.updatePrev();
+                // this.vel.set([0, 0]);
+            }
+            if (this.pos.y < 0 - border) {
+                this.pos.y = height + border;
+                this.updatePrev();
+                // this.vel.set([0, 0]);
+            }
         }
     }
 
