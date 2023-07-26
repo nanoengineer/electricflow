@@ -70,6 +70,11 @@ let sketch = function (p) {
         fixedParticleSink: { x: -500, y: 500 },
     };
 
+    let soundLoadingFlags = {
+        percentage: 0,
+        finished: false
+    }
+
     InteractionSettings.manipulatedMaxSpeedScalerRange.max = InteractionSettings.particleMaxSpeedScaler * 2;
 
     //Interaction settings
@@ -92,9 +97,15 @@ let sketch = function (p) {
     let musicHigh;
     let musicLow;
 
+    let a = 0;
+
     p.preload = function () {
         p.loadSound('./media_assets/LordOfTheDawn-JesseGallagher.mp3', highSongLoaded);
-        p.loadSound('./media_assets/LordOfTheDawn-JesseGallagher.mp3', lowSongLoaded);
+        p.loadSound('./media_assets/LordOfTheDawn-JesseGallagher.mp3', lowSongLoaded, 0, whileLoading);
+    }
+
+    function whileLoading(pc) {
+        soundLoadingFlags.percentage = pc;
     }
 
     p.setup = function () {
@@ -135,113 +146,137 @@ let sketch = function (p) {
         p.background(0);
     };
 
+    function loadingScreen(angle) {
+        let radius = 75;
+        let angle2 = angle + 1;
+        p.background(0, 15);
+        p.push();
+        p.translate(width / 2, height / 2); // Move the origin to the center of the screen
+        // Calculate the position of the circle based on the angle
+        const x1 = radius * p.cos(angle);
+        const y1 = radius * p.sin(angle);
+        const x2 = radius * p.cos(angle2);
+        const y2 = radius * p.sin(angle2);
+        p.noStroke();
+        p.fill(255, 100); // Circle color (white)
+        p.ellipse(x1, y1, 10, 10); // Draw the circle
+        p.ellipse(x2, y2, 10, 10); // Draw the circle
+        p.pop();
+    }
+
     p.draw = function () {
-        p.background(255, 1);
-
-        particleGraphics.background(0, uxSettings.trailCoeff);
-        handGraphics.clear();
-
-        averageFrameRateBuffer.enqueue(p.frameRate());
-        const avgFr = averageFrameRateBuffer.getAverage();
-
-        t = t + uxSettings.perlinNoiseTimeStep * uxSettings.perlinTimestepScaler / (p.frameRate() + 0.001);
-
-        ct = ct + uxSettings.perlinNoiseTimeStep * uxSettings.perlinTimestepScaler * 0.5 / (p.frameRate() + 0.001);
-
-        const l = colorList.length;
-        const id = p.noise(ct) * (l);
-
-        const i = p.floor(id);
-        const d = id - i;
-
-        uxSettings.nColor = p.lerpColor(colorList[i][0], colorList[(i + 1) % l][0], d);
-        uxSettings.pColor = p.lerpColor(colorList[i][1], colorList[(i + 1) % l][1], d);
-
-        //Only evolve the ambient charges
-        for (let i = 0; i < uxSettings.numOfAmbientCharges; i++) {
-            let polarity = 1;
-            //make the avaiable space to evolve from -0.2 to 1.2 of screen
-            let x = p.noise(t + 5 + i) * 1.4 * width - 0.2 * width;
-            let y = p.noise(t + 10 + i) * 1.4 * height - 0.2 * height;
-            charges[i].position.set([x, y]);
-            //even index charges are sources, odd are sinks. 
-            if ((i % 2) == 1) {
-                polarity = -1;
-            }
-            charges[i].charge = p.noise(t + 20 * i) * (uxSettings.chargeMagnitude) * (polarity * uxSettings.chargeFlip)
+        if (soundLoadingFlags.finished == false) {
+            loadingScreen(a);
+            a += 0.025;
         }
+        //Start the sketch
+        if (soundLoadingFlags.finished == true) {
+            p.background(255, 1);
+            particleGraphics.background(0, uxSettings.trailCoeff);
+            handGraphics.clear();
 
-        // setTestCharge(-0.5);
+            averageFrameRateBuffer.enqueue(p.frameRate());
+            const avgFr = averageFrameRateBuffer.getAverage();
 
-        //Hand detection from MediaPipe
-        let results = window.handDetectionResults;
+            t = t + uxSettings.perlinNoiseTimeStep * uxSettings.perlinTimestepScaler / (p.frameRate() + 0.001);
 
-        if (handResultValid(results)) {
-            let hand = results.handednesses[0][0];
-            let dotColor = leftHandColor;
-            if (hand.categoryName == 'Right') {
-                dotColor = rightHandColor;
+            ct = ct + uxSettings.perlinNoiseTimeStep * uxSettings.perlinTimestepScaler * 0.5 / (p.frameRate() + 0.001);
+
+            const l = colorList.length;
+            const id = p.noise(ct) * (l);
+
+            const i = p.floor(id);
+            const d = id - i;
+
+            uxSettings.nColor = p.lerpColor(colorList[i][0], colorList[(i + 1) % l][0], d);
+            uxSettings.pColor = p.lerpColor(colorList[i][1], colorList[(i + 1) % l][1], d);
+
+            //Only evolve the ambient charges
+            for (let i = 0; i < uxSettings.numOfAmbientCharges; i++) {
+                let polarity = 1;
+                //make the avaiable space to evolve from -0.2 to 1.2 of screen
+                let x = p.noise(t + 5 + i) * 1.4 * width - 0.2 * width;
+                let y = p.noise(t + 10 + i) * 1.4 * height - 0.2 * height;
+                charges[i].position.set([x, y]);
+                //even index charges are sources, odd are sinks. 
+                if ((i % 2) == 1) {
+                    polarity = -1;
+                }
+                charges[i].charge = p.noise(t + 20 * i) * (uxSettings.chargeMagnitude) * (polarity * uxSettings.chargeFlip)
             }
-            const lm = results.landmarks[0];
-            const wlm = results.worldLandmarks[0];
 
-            for (let i = 0; i < lm.length; i++) {
-                handCoordinatesBuffer[i].enqueue([lm[i].x, lm[i].y]);
-                smoothedHandLandmarks[i].set(handCoordinatesBuffer[i].getAverage());
+            // setTestCharge(-0.5);
+
+            //Hand detection from MediaPipe
+            let results = window.handDetectionResults;
+
+            if (handResultValid(results)) {
+                let hand = results.handednesses[0][0];
+                let dotColor = leftHandColor;
+                if (hand.categoryName == 'Right') {
+                    dotColor = rightHandColor;
+                }
+                const lm = results.landmarks[0];
+                const wlm = results.worldLandmarks[0];
+
+                for (let i = 0; i < lm.length; i++) {
+                    handCoordinatesBuffer[i].enqueue([lm[i].x, lm[i].y]);
+                    smoothedHandLandmarks[i].set(handCoordinatesBuffer[i].getAverage());
+                }
+
+                const palmOrient = getPalmOrientation(wlm, hand.categoryName);
+                palmOrientBuffer.enqueue(palmOrient);
+
+                let fieldColor = p.lerpColor(uxSettings.nColor, uxSettings.pColor, palmOrientBuffer.getAverage());
+
+                //Calculate compactness of finger tips
+                fingersCompactnessBuffer.enqueue(calculateCompactnessEuclidean([wlm[4], wlm[8], wlm[12], wlm[16], wlm[20]]));
+                const smoothedCompactness = fingersCompactnessBuffer.getAverage();
+
+                updateManipulation(smoothedCompactness, palmOrientBuffer.getAverage());
+
+
+                if (uxSettings.showHand) {
+                    drawHandConnections(smoothedHandLandmarks, handGraphics, fieldColor);
+                }
+
+                if (uxSettings.numOfFingerCharges > 0) {
+                    setHandCharges(uxSettings, smoothedHandLandmarks, uxSettings.chargeMagnitude * uxSettings.handChargeMultiplier);
+                }
+            }
+            else {
+                clearHandCharges(uxSettings, charges);
             }
 
-            const palmOrient = getPalmOrientation(wlm, hand.categoryName);
-            palmOrientBuffer.enqueue(palmOrient);
-
-            let fieldColor = p.lerpColor(uxSettings.nColor, uxSettings.pColor, palmOrientBuffer.getAverage());
-
-            //Calculate compactness of finger tips
-            fingersCompactnessBuffer.enqueue(calculateCompactnessEuclidean([wlm[4], wlm[8], wlm[12], wlm[16], wlm[20]]));
-            const smoothedCompactness = fingersCompactnessBuffer.getAverage();
-
-            updateManipulation(smoothedCompactness, palmOrientBuffer.getAverage());
-
-
-            if (uxSettings.showHand) {
-                drawHandConnections(smoothedHandLandmarks, handGraphics, fieldColor);
+            //Set different framerate targets depending on if webcam is on or off
+            let target;
+            if (window.webcamRunning) {
+                target = uxSettings.desireFrameRateWhenTracking;
+            } else {
+                target = uxSettings.desiredFrameRate;
             }
 
-            if (uxSettings.numOfFingerCharges > 0) {
-                setHandCharges(uxSettings, smoothedHandLandmarks, uxSettings.chargeMagnitude * uxSettings.handChargeMultiplier);
+            generateParticlesUntilFramerate(aParticles, avgFr, target);
+            generateParticlesUntilFramerate(bParticles, avgFr, target);
+            generateParticlesUntilFramerate(cParticles, avgFr, target);
+            generateParticlesUntilFramerate(dParticles, avgFr, target);
+
+            runParticlesEngine(aParticles, charges, 10, particleGraphics);
+            runParticlesEngine(bParticles, charges, 8, particleGraphics);
+            runParticlesEngine(cParticles, charges, 6, particleGraphics);
+            runParticlesEngine(dParticles, charges, 4, particleGraphics);
+
+            p.drawingContext.filter = `blur(${uxSettings.particleBlurPx}px)`;
+            p.image(particleGraphics, 0, 0);
+            p.drawingContext.filter = `blur(${uxSettings.handBlurPx}px)`;
+            p.image(handGraphics, 0, 0);
+            p.drawingContext.filter = 'blur(0px)';
+            p.image(welcomeGraphics, 0, 0);
+
+
+            if (uxSettings.showFrameRate) {
+                showFrameRate(avgFr);
             }
-        }
-        else {
-            clearHandCharges(uxSettings, charges);
-        }
-
-        //Set different framerate targets depending on if webcam is on or off
-        let target;
-        if (window.webcamRunning) {
-            target = uxSettings.desireFrameRateWhenTracking;
-        } else {
-            target = uxSettings.desiredFrameRate;
-        }
-
-        generateParticlesUntilFramerate(aParticles, avgFr, target);
-        generateParticlesUntilFramerate(bParticles, avgFr, target);
-        generateParticlesUntilFramerate(cParticles, avgFr, target);
-        generateParticlesUntilFramerate(dParticles, avgFr, target);
-
-        runParticlesEngine(aParticles, charges, 10, particleGraphics);
-        runParticlesEngine(bParticles, charges, 8, particleGraphics);
-        runParticlesEngine(cParticles, charges, 6, particleGraphics);
-        runParticlesEngine(dParticles, charges, 4, particleGraphics);
-
-        p.drawingContext.filter = `blur(${uxSettings.particleBlurPx}px)`;
-        p.image(particleGraphics, 0, 0);
-        p.drawingContext.filter = `blur(${uxSettings.handBlurPx}px)`;
-        p.image(handGraphics, 0, 0);
-        p.drawingContext.filter = 'blur(0px)';
-        p.image(welcomeGraphics, 0, 0);
-
-
-        if (uxSettings.showFrameRate) {
-            showFrameRate(avgFr);
         }
     };
 
@@ -296,15 +331,10 @@ let sketch = function (p) {
 
         if (key.key == " ") {
             if (musicHigh != undefined && musicLow != undefined) {
-                musicHigh.play();
-                musicLow.play();
+                musicLow.loop();
+                musicHigh.loop();
             }
             let fs = p.fullscreen();
-            // if (!fs) {
-            //     updateSketchSize(p.displayWidth, p.displayHeight);
-            // } else {
-            //     updateSketchSize(p.windowWidth, p.windowHeight);
-            // }
             p.fullscreen(!fs);
         }
 
@@ -325,13 +355,12 @@ let sketch = function (p) {
     function highSongLoaded(song) {
         musicHigh = song;
         musicHigh.setVolume(0.5);
-        musicHigh.loop();
     }
     function lowSongLoaded(song) {
         musicLow = song;
         musicLow.setVolume(1.0);
         musicLow.rate(0.5);
-        musicLow.loop();
+        soundLoadingFlags.finished = true;
     }
 
     function updateSketchSize(w, h) {
@@ -432,7 +461,7 @@ let sketch = function (p) {
 
         if (musicHigh != undefined && musicHigh != undefined) {
             let a = p.map(compact, cmin, cmax, 0.0, 0.5);
-            const v = p.constrain(a, 0.05, 1.0);
+            const v = p.constrain(a, 0.05, 0.5);
             const s = p.constrain(a, 0.1, 0.5);
             musicHigh.setVolume(v);
             musicLow.rate(s);
